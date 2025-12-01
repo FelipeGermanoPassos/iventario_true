@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event listeners
     document.getElementById('btnAplicarFiltros').addEventListener('click', aplicarFiltros);
     document.getElementById('btnLimparFiltros').addEventListener('click', limparFiltros);
-    document.getElementById('btnExportar').addEventListener('click', exportarCSV);
+    document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
+    document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
 });
 
 // Carrega lista de departamentos para o filtro
@@ -354,6 +355,42 @@ function exportarCSV() {
     document.body.removeChild(link);
     
     mostrarMensagem('Relatório exportado com sucesso!', 'success');
+}
+
+// Exporta dados para PDF
+function exportarPDF() {
+    if (todosEmprestimos.length === 0) {
+        mostrarMensagem('Não há dados para exportar.', 'info');
+        return;
+    }
+    
+    const filtroTipo = document.getElementById('filtroTipo').value;
+    const filtroDepartamento = document.getElementById('filtroDepartamento').value;
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    
+    // Monta a URL com os parâmetros
+    const params = new URLSearchParams({
+        filtro: filtroTipo
+    });
+    
+    if (filtroDepartamento && filtroDepartamento !== 'todos') {
+        params.append('departamento', filtroDepartamento);
+    }
+    
+    if (dataInicio) {
+        params.append('data_inicio', dataInicio);
+    }
+    
+    if (dataFim) {
+        params.append('data_fim', dataFim);
+    }
+    
+    // Abre em nova aba para download
+    const url = `/relatorios/exportar-pdf?${params.toString()}`;
+    window.open(url, '_blank');
+    
+    mostrarMensagem('PDF gerado com sucesso!', 'success');
 }
 
 // Exibe mensagens de feedback

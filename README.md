@@ -24,7 +24,8 @@ Sistema web completo para gerenciamento de equipamentos de TI com controle de es
   - Empréstimos por departamento
   - Top 10 equipamentos mais emprestados
 - 📊 **Estatísticas Detalhadas**: Total, ativos, devolvidos, atrasados e duração média
-- 📥 **Exportação**: Exporte relatórios para CSV
+- 📥 **Exportação CSV**: Exporte relatórios para planilhas
+- 📄 **Exportação PDF**: Gere relatórios profissionais em PDF com tabelas e estatísticas
 - ⚠️ **Alertas Visuais**: Identificação de empréstimos atrasados
 
 ### Dashboard Interativo
@@ -48,6 +49,7 @@ Sistema web completo para gerenciamento de equipamentos de TI com controle de es
 - **Banco de Dados**: SQLite com SQLAlchemy
 - **Frontend**: HTML5, CSS3, JavaScript
 - **Gráficos**: Chart.js
+- **Relatórios PDF**: ReportLab
 - **Design**: Responsivo e moderno
 
 ## 📦 Instalação
@@ -182,7 +184,9 @@ iventario_true/
    - Datas de empréstimo, previsão e devolução
    - Status com identificação visual de atrasados
    - Quantidade de dias do empréstimo
-6. **Exportar dados**: Clique em "📥 Exportar CSV" para baixar o relatório
+6. **Exportar dados**: 
+   - Clique em "📥 Exportar CSV" para baixar planilha
+   - Clique em "📄 Exportar PDF" para gerar relatório profissional em PDF
 
 ### Adicionar Equipamento
 
@@ -315,6 +319,7 @@ iventario_true/
 - `GET /relatorios` - Página de relatórios
 - `GET /relatorios/emprestimos` - Dados de empréstimos com filtros (query params: filtro, data_inicio, data_fim, departamento)
 - `GET /relatorios/departamentos` - Lista departamentos únicos
+- `GET /relatorios/exportar-pdf` - Gera e baixa relatório em PDF (query params: filtro, data_inicio, data_fim, departamento)
 
 ### Equipamentos
 - `GET /` - Página principal (requer autenticação)
@@ -347,7 +352,7 @@ O sistema é totalmente responsivo e funciona em:
 - [x] Perfil de usuário com alteração de senha
 - [x] Painel administrativo para gerenciar usuários
 - [x] Relatórios de empréstimos (ativos, histórico, atrasados)
-- [ ] Exportação de relatórios em PDF
+- [x] Exportação de relatórios em PDF
 - [ ] Upload de fotos dos equipamentos
 - [ ] Histórico de manutenções
 - [ ] Notificações de devolução próxima ao vencimento

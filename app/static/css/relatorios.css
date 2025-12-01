@@ -72,6 +72,17 @@
     transform: translateY(-2px);
 }
 
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: translateY(-2px);
+}
+
 /* ==================== ESTATÍSTICAS ==================== */
 .stats-relatorios {
     display: grid;

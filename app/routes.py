@@ -1,9 +1,16 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import db, Equipamento, Emprestimo, Usuario
 from datetime import datetime
 from sqlalchemy import func
 from functools import wraps
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 main = Blueprint('main', __name__)
 
@@ -748,4 +755,225 @@ def listar_departamentos():
         return jsonify({
             'success': False,
             'message': f'Erro ao listar departamentos: {str(e)}'
+        }), 400
+
+@main.route('/relatorios/exportar-pdf')
+@login_required
+def exportar_relatorio_pdf():
+    """Exporta relatório de empréstimos em PDF"""
+    try:
+        filtro = request.args.get('filtro', 'todos')
+        data_inicio = request.args.get('data_inicio')
+        data_fim = request.args.get('data_fim')
+        departamento = request.args.get('departamento')
+        
+        # Query base com join
+        query = Emprestimo.query.join(Equipamento, Emprestimo.equipamento_id == Equipamento.id)
+        
+        # Aplicar filtros
+        if filtro == 'ativos':
+            query = query.filter(Emprestimo.status == 'Ativo')
+        elif filtro == 'historico':
+            query = query.filter(Emprestimo.status == 'Devolvido')
+        elif filtro == 'atrasados':
+            hoje = datetime.utcnow().date()
+            query = query.filter(
+                Emprestimo.status == 'Ativo',
+                Emprestimo.data_devolucao_prevista < hoje
+            )
+        
+        if data_inicio:
+            data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
+            query = query.filter(Emprestimo.data_emprestimo >= data_inicio_dt)
+        
+        if data_fim:
+            data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d')
+            data_fim_dt = data_fim_dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(Emprestimo.data_emprestimo <= data_fim_dt)
+        
+        if departamento and departamento != 'todos':
+            query = query.filter(Emprestimo.departamento == departamento)
+        
+        emprestimos = query.order_by(Emprestimo.data_emprestimo.desc()).all()
+        
+        # Calcular estatísticas
+        hoje = datetime.utcnow().date()
+        total = len(emprestimos)
+        ativos = sum(1 for e in emprestimos if e.status == 'Ativo')
+        devolvidos = sum(1 for e in emprestimos if e.status == 'Devolvido')
+        atrasados = sum(1 for e in emprestimos if e.status == 'Ativo' and e.data_devolucao_prevista and e.data_devolucao_prevista < hoje)
+        
+        # Criar PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(A4),
+            rightMargin=1*cm,
+            leftMargin=1*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+        
+        # Estilos
+        styles = getSampleStyleSheet()
+        titulo_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            textColor=colors.HexColor('#1e40af'),
+            spaceAfter=10,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        subtitulo_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Normal'],
+            fontSize=11,
+            textColor=colors.grey,
+            spaceAfter=20,
+            alignment=TA_CENTER
+        )
+        
+        # Elementos do PDF
+        elements = []
+        
+        # Título
+        titulo = Paragraph("📊 Relatório de Empréstimos de Equipamentos", titulo_style)
+        elements.append(titulo)
+        
+        # Data de geração
+        data_geracao = datetime.now().strftime('%d/%m/%Y às %H:%M')
+        subtitulo = Paragraph(f"Gerado em {data_geracao} por {current_user.nome}", subtitulo_style)
+        elements.append(subtitulo)
+        
+        # Filtros aplicados
+        filtros_texto = f"<b>Filtros:</b> Tipo: {filtro.capitalize()}"
+        if departamento and departamento != 'todos':
+            filtros_texto += f" | Departamento: {departamento}"
+        if data_inicio:
+            filtros_texto += f" | Início: {datetime.strptime(data_inicio, '%Y-%m-%d').strftime('%d/%m/%Y')}"
+        if data_fim:
+            filtros_texto += f" | Fim: {datetime.strptime(data_fim, '%Y-%m-%d').strftime('%d/%m/%Y')}"
+        
+        filtros_p = Paragraph(filtros_texto, styles['Normal'])
+        elements.append(filtros_p)
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Estatísticas
+        stats_data = [
+            ['Total', 'Ativos', 'Devolvidos', 'Atrasados'],
+            [str(total), str(ativos), str(devolvidos), str(atrasados)]
+        ]
+        
+        stats_table = Table(stats_data, colWidths=[5*cm, 5*cm, 5*cm, 5*cm])
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('FONTSIZE', (0, 1), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        
+        elements.append(stats_table)
+        elements.append(Spacer(1, 0.8*cm))
+        
+        # Tabela de empréstimos
+        if emprestimos:
+            # Cabeçalho
+            table_data = [['Equipamento', 'Responsável', 'Depto', 'Data Emp.', 'Prev. Dev.', 'Status', 'Dias']]
+            
+            # Dados
+            for e in emprestimos:
+                equipamento_nome = e.equipamento.nome if e.equipamento else 'N/A'
+                data_emp = e.data_emprestimo.strftime('%d/%m/%Y')
+                prev_dev = e.data_devolucao_prevista.strftime('%d/%m/%Y') if e.data_devolucao_prevista else '-'
+                
+                # Status
+                is_atrasado = e.status == 'Ativo' and e.data_devolucao_prevista and e.data_devolucao_prevista < hoje
+                status_text = 'Atrasado' if is_atrasado else e.status
+                
+                # Dias
+                if e.status == 'Ativo':
+                    dias = (datetime.utcnow().date() - e.data_emprestimo.date()).days
+                elif e.data_devolucao_real:
+                    dias = (e.data_devolucao_real.date() - e.data_emprestimo.date()).days
+                else:
+                    dias = '-'
+                
+                table_data.append([
+                    equipamento_nome[:25],
+                    e.responsavel[:20],
+                    (e.departamento or '-')[:15],
+                    data_emp,
+                    prev_dev,
+                    status_text,
+                    str(dias)
+                ])
+            
+            # Criar tabela
+            emprestimos_table = Table(table_data, colWidths=[5.5*cm, 4*cm, 3*cm, 2.5*cm, 2.5*cm, 2.5*cm, 1.5*cm])
+            
+            # Estilo da tabela
+            table_style = [
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('ALIGN', (3, 0), (6, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
+            ]
+            
+            # Destacar linhas atrasadas
+            for i, e in enumerate(emprestimos, 1):
+                is_atrasado = e.status == 'Ativo' and e.data_devolucao_prevista and e.data_devolucao_prevista < hoje
+                if is_atrasado:
+                    table_style.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor('#fee2e2')))
+            
+            emprestimos_table.setStyle(TableStyle(table_style))
+            elements.append(emprestimos_table)
+        else:
+            elements.append(Paragraph("Nenhum empréstimo encontrado com os filtros aplicados.", styles['Normal']))
+        
+        # Rodapé
+        elements.append(Spacer(1, 1*cm))
+        rodape = Paragraph(
+            f"<i>Sistema de Inventário de Equipamentos TI - {current_user.nome}</i>",
+            ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)
+        )
+        elements.append(rodape)
+        
+        # Gerar PDF
+        doc.build(elements)
+        
+        # Preparar resposta
+        buffer.seek(0)
+        response = make_response(buffer.getvalue())
+        response.headers['Content-Type'] = 'application/pdf'
+        
+        # Nome do arquivo
+        data_arquivo = datetime.now().strftime('%Y%m%d_%H%M%S')
+        nome_arquivo = f'relatorio_emprestimos_{filtro}_{data_arquivo}.pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename={nome_arquivo}'
+        
+        buffer.close()
+        return response
+        
+    except Exception as e:
+        print(f"Erro ao gerar PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao gerar PDF: {str(e)}'
         }), 400
