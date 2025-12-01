@@ -1,7 +1,51 @@
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 db = SQLAlchemy()
+
+
+class Usuario(UserMixin, db.Model):
+    """Modelo para usuários do sistema"""
+    __tablename__ = 'usuarios'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    senha_hash = db.Column(db.String(255), nullable=False)
+    departamento = db.Column(db.String(100))
+    telefone = db.Column(db.String(20))
+    is_admin = db.Column(db.Boolean, default=False)
+    ativo = db.Column(db.Boolean, default=True)
+    data_cadastro = db.Column(db.DateTime, default=datetime.utcnow)
+    ultimo_acesso = db.Column(db.DateTime)
+    
+    def set_password(self, senha):
+        """Define a senha do usuário (com hash)"""
+        self.senha_hash = generate_password_hash(senha)
+    
+    def check_password(self, senha):
+        """Verifica se a senha está correta"""
+        return check_password_hash(self.senha_hash, senha)
+    
+    def to_dict(self):
+        """Converte o objeto para dicionário"""
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'email': self.email,
+            'departamento': self.departamento,
+            'telefone': self.telefone,
+            'is_admin': self.is_admin,
+            'ativo': self.ativo,
+            'data_cadastro': self.data_cadastro.strftime('%Y-%m-%d %H:%M:%S'),
+            'ultimo_acesso': self.ultimo_acesso.strftime('%Y-%m-%d %H:%M:%S') if self.ultimo_acesso else None
+        }
+    
+    def __repr__(self):
+        return f'<Usuario {self.email}>'
+
 
 class Equipamento(db.Model):
     """Modelo para equipamentos de TI"""

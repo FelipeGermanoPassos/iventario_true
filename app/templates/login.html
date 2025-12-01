@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Inventário</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo">
+                <h1>🔐 Sistema de Inventário</h1>
+                <p>Gerenciamento de Equipamentos TI</p>
+            </div>
+
+            <!-- Formulário de Login -->
+            <div id="formLogin" class="form-container active">
+                <h2>Entrar</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">E-mail</label>
+                        <input type="email" id="loginEmail" name="email" required placeholder="seu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginSenha">Senha</label>
+                        <input type="password" id="loginSenha" name="senha" required placeholder="Digite sua senha">
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" id="lembrar" name="lembrar">
+                            Lembrar de mim
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Entrar</button>
+                </form>
+                <p class="toggle-form">
+                    Não tem uma conta? <a href="#" onclick="mostrarRegistro()">Cadastre-se</a>
+                </p>
+            </div>
+
+            <!-- Formulário de Registro -->
+            <div id="formRegistro" class="form-container">
+                <h2>Criar Conta</h2>
+                <form id="registroForm">
+                    <div class="form-group">
+                        <label for="registroNome">Nome Completo *</label>
+                        <input type="text" id="registroNome" name="nome" required placeholder="Seu nome completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="registroEmail">E-mail *</label>
+                        <input type="email" id="registroEmail" name="email" required placeholder="seu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="registroDepartamento">Departamento</label>
+                        <input type="text" id="registroDepartamento" name="departamento" placeholder="Ex: TI, RH, Financeiro">
+                    </div>
+                    <div class="form-group">
+                        <label for="registroTelefone">Telefone</label>
+                        <input type="tel" id="registroTelefone" name="telefone" placeholder="(00) 00000-0000">
+                    </div>
+                    <div class="form-group">
+                        <label for="registroSenha">Senha *</label>
+                        <input type="password" id="registroSenha" name="senha" required placeholder="Mínimo 6 caracteres" minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="registroConfirmarSenha">Confirmar Senha *</label>
+                        <input type="password" id="registroConfirmarSenha" name="confirmar_senha" required placeholder="Digite a senha novamente" minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Cadastrar</button>
+                </form>
+                <p class="toggle-form">
+                    Já tem uma conta? <a href="#" onclick="mostrarLogin()">Faça login</a>
+                </p>
+            </div>
+
+            <!-- Mensagens de feedback -->
+            <div id="mensagem" class="message"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>

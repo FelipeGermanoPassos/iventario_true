@@ -48,13 +48,24 @@ Sistema web completo para gerenciamento de equipamentos de TI com controle de es
 pip install -r requirements.txt
 ```
 
-### 2. Executar o servidor
+### 2. Criar usuário administrador
+
+```powershell
+python criar_admin.py
+```
+
+**Credenciais padrão:**
+- Email: `admin@inventario.com`
+- Senha: `admin123`
+- ⚠️ **IMPORTANTE**: Altere a senha após o primeiro login!
+
+### 3. Executar o servidor
 
 ```powershell
 python run.py
 ```
 
-### 3. Acessar o sistema
+### 4. Acessar o sistema
 
 Abra seu navegador em: **http://localhost:5000**
 
@@ -63,22 +74,49 @@ Abra seu navegador em: **http://localhost:5000**
 ```
 iventario_true/
 ├── app/
-│   ├── __init__.py          # Inicialização do Flask
+│   ├── __init__.py          # Inicialização do Flask e Login
 │   ├── models.py            # Modelos do banco de dados
 │   ├── routes.py            # Rotas e APIs
 │   ├── static/
 │   │   ├── css/
-│   │   │   └── style.css    # Estilos CSS
+│   │   │   ├── style.css    # Estilos principais
+│   │   │   └── login.css    # Estilos da tela de login
 │   │   └── js/
-│   │       └── app.js       # JavaScript principal
+│   │       ├── app.js       # JavaScript principal
+│   │       └── login.js     # JavaScript do login
 │   └── templates/
-│       └── index.html       # Template HTML
+│       ├── index.html       # Template principal
+│       └── login.html       # Template de login
+├── instance/
+│   └── inventario.db        # Banco de dados SQLite
+├── criar_admin.py           # Script para criar admin
 ├── run.py                   # Arquivo principal para executar
 ├── requirements.txt         # Dependências do projeto
 └── README.md               # Este arquivo
 ```
 
 ## 💻 Uso do Sistema
+
+### Primeiro Acesso
+
+1. Acesse **http://localhost:5000**
+2. Faça login com as credenciais do administrador:
+   - Email: `admin@inventario.com`
+   - Senha: `admin123`
+3. Ou crie uma nova conta clicando em **"Cadastre-se"**
+
+### Registrar Novo Usuário
+
+1. Na tela de login, clique em **"Cadastre-se"**
+2. Preencha os dados:
+   - Nome completo (obrigatório)
+   - Email (obrigatório)
+   - Departamento (opcional)
+   - Telefone (opcional)
+   - Senha (mínimo 6 caracteres)
+   - Confirmar senha
+3. Clique em **"Cadastrar"**
+4. Após o cadastro, faça login com suas credenciais
 
 ### Adicionar Equipamento
 
@@ -135,6 +173,21 @@ iventario_true/
 
 ## 🗄️ Modelo de Dados
 
+### Usuário
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | Integer | ID único |
+| nome | String | Nome completo |
+| email | String | Email (único) |
+| senha_hash | String | Senha criptografada |
+| departamento | String | Departamento/Setor |
+| telefone | String | Telefone de contato |
+| is_admin | Boolean | Administrador (padrão: false) |
+| ativo | Boolean | Conta ativa (padrão: true) |
+| data_cadastro | DateTime | Data de cadastro |
+| ultimo_acesso | DateTime | Data do último acesso |
+
 ### Equipamento
 
 | Campo | Tipo | Descrição |
@@ -174,8 +227,15 @@ iventario_true/
 
 ## 🔒 APIs Disponíveis
 
+### Autenticação
+- `GET /login` - Página de login
+- `POST /login` - Autenticar usuário
+- `GET /registro` - Página de registro
+- `POST /registro` - Registrar novo usuário
+- `GET /logout` - Deslogar usuário
+
 ### Equipamentos
-- `GET /` - Página principal
+- `GET /` - Página principal (requer autenticação)
 - `GET /dashboard-data` - Dados para o dashboard
 - `GET /equipamentos` - Lista todos os equipamentos
 - `GET /equipamentos-estoque` - Lista apenas equipamentos em estoque
@@ -201,7 +261,9 @@ O sistema é totalmente responsivo e funciona em:
 
 ## 🚀 Próximas Melhorias Sugeridas
 
-- [ ] Autenticação de usuários
+- [x] Autenticação de usuários
+- [ ] Perfil de usuário com alteração de senha
+- [ ] Painel administrativo para gerenciar usuários
 - [ ] Relatórios de empréstimos (ativos, histórico, atrasados)
 - [ ] Exportação de dados (PDF, Excel)
 - [ ] Upload de fotos dos equipamentos

@@ -1,16 +1,86 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
-from app.models import db, Equipamento, Emprestimo
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask_login import login_user, logout_user, login_required, current_user
+from app.models import db, Equipamento, Emprestimo, Usuario
 from datetime import datetime
 from sqlalchemy import func
 
 main = Blueprint('main', __name__)
 
+# ==================== ROTAS DE AUTENTICAÇÃO ====================
+
+@main.route('/login', methods=['GET', 'POST'])
+def login():
+    """Página de login"""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    
+    if request.method == 'POST':
+        data = request.get_json()
+        email = data.get('email')
+        senha = data.get('senha')
+        
+        usuario = Usuario.query.filter_by(email=email).first()
+        
+        if usuario and usuario.check_password(senha):
+            if not usuario.ativo:
+                return jsonify({'success': False, 'message': 'Usuário inativo. Contate o administrador.'}), 403
+            
+            login_user(usuario, remember=data.get('lembrar', False))
+            usuario.ultimo_acesso = datetime.utcnow()
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': 'Login realizado com sucesso!'})
+        
+        return jsonify({'success': False, 'message': 'Email ou senha incorretos.'}), 401
+    
+    return render_template('login.html')
+
+@main.route('/registro', methods=['GET', 'POST'])
+def registro():
+    """Página de registro de novos usuários"""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    
+    if request.method == 'POST':
+        data = request.get_json()
+        
+        # Valida se o email já existe
+        if Usuario.query.filter_by(email=data.get('email')).first():
+            return jsonify({'success': False, 'message': 'Email já cadastrado.'}), 400
+        
+        # Cria novo usuário
+        novo_usuario = Usuario(
+            nome=data.get('nome'),
+            email=data.get('email'),
+            departamento=data.get('departamento'),
+            telefone=data.get('telefone')
+        )
+        novo_usuario.set_password(data.get('senha'))
+        
+        db.session.add(novo_usuario)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Usuário cadastrado com sucesso! Faça login para continuar.'})
+    
+    return render_template('login.html')
+
+@main.route('/logout')
+@login_required
+def logout():
+    """Logout do usuário"""
+    logout_user()
+    return redirect(url_for('main.login'))
+
+# ==================== ROTAS PRINCIPAIS ====================
+
 @main.route('/')
+@login_required
 def index():
     """Página principal com dashboard"""
     return render_template('index.html')
 
 @main.route('/dashboard-data')
+@login_required
 def dashboard_data():
     """Retorna dados para o dashboard"""
     # Total de equipamentos
@@ -47,18 +117,21 @@ def dashboard_data():
     })
 
 @main.route('/equipamentos')
+@login_required
 def listar_equipamentos():
     """Lista todos os equipamentos"""
     equipamentos = Equipamento.query.order_by(Equipamento.data_cadastro.desc()).all()
     return jsonify([eq.to_dict() for eq in equipamentos])
 
 @main.route('/equipamento/<int:id>')
+@login_required
 def obter_equipamento(id):
     """Obtém um equipamento específico"""
     equipamento = Equipamento.query.get_or_404(id)
     return jsonify(equipamento.to_dict())
 
 @main.route('/equipamento/adicionar', methods=['POST'])
+@login_required
 def adicionar_equipamento():
     """Adiciona um novo equipamento"""
     try:
@@ -102,6 +175,7 @@ def adicionar_equipamento():
         }), 400
 
 @main.route('/equipamento/editar/<int:id>', methods=['PUT'])
+@login_required
 def editar_equipamento(id):
     """Edita um equipamento existente"""
     try:
@@ -143,6 +217,7 @@ def editar_equipamento(id):
         }), 400
 
 @main.route('/equipamento/deletar/<int:id>', methods=['DELETE'])
+@login_required
 def deletar_equipamento(id):
     """Deleta um equipamento"""
     try:
@@ -166,30 +241,35 @@ def deletar_equipamento(id):
 # ===== ROTAS DE EMPRÉSTIMOS =====
 
 @main.route('/equipamentos-estoque')
+@login_required
 def listar_equipamentos_estoque():
     """Lista apenas equipamentos disponíveis em estoque"""
     equipamentos = Equipamento.query.filter_by(status='Estoque').order_by(Equipamento.nome).all()
     return jsonify([eq.to_dict() for eq in equipamentos])
 
 @main.route('/emprestimos')
+@login_required
 def listar_emprestimos():
     """Lista todos os empréstimos"""
     emprestimos = Emprestimo.query.order_by(Emprestimo.data_emprestimo.desc()).all()
     return jsonify([emp.to_dict() for emp in emprestimos])
 
 @main.route('/emprestimos-ativos')
+@login_required
 def listar_emprestimos_ativos():
     """Lista apenas empréstimos ativos"""
     emprestimos = Emprestimo.query.filter_by(status='Ativo').order_by(Emprestimo.data_emprestimo.desc()).all()
     return jsonify([emp.to_dict() for emp in emprestimos])
 
 @main.route('/emprestimo/<int:id>')
+@login_required
 def obter_emprestimo(id):
     """Obtém um empréstimo específico"""
     emprestimo = Emprestimo.query.get_or_404(id)
     return jsonify(emprestimo.to_dict())
 
 @main.route('/emprestimo/adicionar', methods=['POST'])
+@login_required
 def adicionar_emprestimo():
     """Registra um novo empréstimo"""
     try:
@@ -245,6 +325,7 @@ def adicionar_emprestimo():
         }), 400
 
 @main.route('/emprestimo/devolver/<int:id>', methods=['PUT'])
+@login_required
 def devolver_emprestimo(id):
     """Registra a devolução de um empréstimo"""
     try:
@@ -281,6 +362,7 @@ def devolver_emprestimo(id):
         }), 400
 
 @main.route('/emprestimo/deletar/<int:id>', methods=['DELETE'])
+@login_required
 def deletar_emprestimo(id):
     """Deleta um empréstimo"""
     try:
