@@ -353,7 +353,7 @@ O sistema é totalmente responsivo e funciona em:
 - [x] Painel administrativo para gerenciar usuários
 - [x] Relatórios de empréstimos (ativos, histórico, atrasados)
 - [x] Exportação de relatórios em PDF
-- [ ] Upload de fotos dos equipamentos
+- [x] Upload de fotos dos equipamentos
 - [ ] Histórico de manutenções
 - [ ] Notificações de devolução próxima ao vencimento
 - [ ] Alertas de empréstimos atrasados

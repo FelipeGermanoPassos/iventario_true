@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response, current_app
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response, current_app, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import db, Equipamento, Emprestimo, Usuario, EquipamentoFoto
 from datetime import datetime
@@ -323,6 +323,13 @@ def editar_usuario(id):
 def index():
     """Página principal com dashboard"""
     return render_template('index.html')
+
+
+@main.route('/sw.js')
+def service_worker():
+    """Serve o Service Worker na raiz para escopo global."""
+    sw_dir = os.path.join(current_app.root_path, 'static', 'js')
+    return send_from_directory(sw_dir, 'sw.js', mimetype='application/javascript')
 
 @main.route('/dashboard-data')
 @login_required
