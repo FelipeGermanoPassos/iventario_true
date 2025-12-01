@@ -623,3 +623,127 @@ def deletar_emprestimo(id):
             'success': False,
             'message': f'Erro ao deletar empréstimo: {str(e)}'
         }), 400
+
+# ==================== ROTAS DE RELATÓRIOS ====================
+
+@main.route('/relatorios')
+@login_required
+def relatorios():
+    """Página de relatórios de empréstimos"""
+    return render_template('relatorios.html')
+
+@main.route('/relatorios/emprestimos')
+@login_required
+def relatorios_emprestimos():
+    """Retorna dados de empréstimos para relatórios"""
+    try:
+        filtro = request.args.get('filtro', 'todos')  # todos, ativos, historico, atrasados
+        data_inicio = request.args.get('data_inicio')
+        data_fim = request.args.get('data_fim')
+        departamento = request.args.get('departamento')
+        
+        # Query base
+        query = Emprestimo.query
+        
+        # Aplicar filtros
+        if filtro == 'ativos':
+            query = query.filter_by(status='Ativo')
+        elif filtro == 'historico':
+            query = query.filter_by(status='Devolvido')
+        elif filtro == 'atrasados':
+            hoje = datetime.utcnow().date()
+            query = query.filter(
+                Emprestimo.status == 'Ativo',
+                Emprestimo.data_devolucao_prevista < hoje
+            )
+        
+        # Filtro por período
+        if data_inicio:
+            data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
+            query = query.filter(Emprestimo.data_emprestimo >= data_inicio_dt)
+        
+        if data_fim:
+            data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d')
+            # Adiciona 23:59:59 para incluir todo o dia
+            data_fim_dt = data_fim_dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(Emprestimo.data_emprestimo <= data_fim_dt)
+        
+        # Filtro por departamento
+        if departamento and departamento != 'todos':
+            query = query.filter_by(departamento=departamento)
+        
+        # Ordenar por data de empréstimo (mais recentes primeiro)
+        emprestimos = query.order_by(Emprestimo.data_emprestimo.desc()).all()
+        
+        # Calcular estatísticas
+        hoje = datetime.utcnow().date()
+        total_emprestimos = len(emprestimos)
+        ativos = sum(1 for e in emprestimos if e.status == 'Ativo')
+        devolvidos = sum(1 for e in emprestimos if e.status == 'Devolvido')
+        atrasados = sum(1 for e in emprestimos if e.status == 'Ativo' and e.data_devolucao_prevista and e.data_devolucao_prevista < hoje)
+        
+        # Calcular duração média dos empréstimos devolvidos
+        duracoes = []
+        for e in emprestimos:
+            if e.status == 'Devolvido' and e.data_devolucao_real:
+                duracao = (e.data_devolucao_real - e.data_emprestimo).days
+                duracoes.append(duracao)
+        
+        duracao_media = sum(duracoes) / len(duracoes) if duracoes else 0
+        
+        # Empréstimos por departamento
+        emprestimos_por_dept = {}
+        for e in emprestimos:
+            dept = e.departamento or 'Não informado'
+            emprestimos_por_dept[dept] = emprestimos_por_dept.get(dept, 0) + 1
+        
+        # Equipamentos mais emprestados
+        equipamentos_count = {}
+        for e in emprestimos:
+            equipamento = Equipamento.query.get(e.equipamento_id)
+            if equipamento:
+                nome = equipamento.nome
+                equipamentos_count[nome] = equipamentos_count.get(nome, 0) + 1
+        
+        # Top 10 equipamentos
+        top_equipamentos = sorted(equipamentos_count.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        return jsonify({
+            'success': True,
+            'emprestimos': [e.to_dict() for e in emprestimos],
+            'estatisticas': {
+                'total': total_emprestimos,
+                'ativos': ativos,
+                'devolvidos': devolvidos,
+                'atrasados': atrasados,
+                'duracao_media': round(duracao_media, 1)
+            },
+            'emprestimos_por_departamento': emprestimos_por_dept,
+            'top_equipamentos': [{'nome': nome, 'quantidade': qtd} for nome, qtd in top_equipamentos]
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao gerar relatório: {str(e)}'
+        }), 400
+
+@main.route('/relatorios/departamentos')
+@login_required
+def listar_departamentos():
+    """Lista todos os departamentos únicos dos empréstimos"""
+    try:
+        departamentos = db.session.query(Emprestimo.departamento).distinct().filter(
+            Emprestimo.departamento.isnot(None),
+            Emprestimo.departamento != ''
+        ).order_by(Emprestimo.departamento).all()
+        
+        return jsonify({
+            'success': True,
+            'departamentos': [d[0] for d in departamentos]
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao listar departamentos: {str(e)}'
+        }), 400

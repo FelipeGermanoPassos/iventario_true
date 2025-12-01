@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios de Empréstimos - Sistema de Inventário</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/relatorios.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Relatórios de Empréstimos</h1>
+            <div class="header-buttons">
+                <a href="{{ url_for('main.index') }}" class="btn btn-secondary">← Voltar ao Dashboard</a>
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('main.admin') }}" class="btn btn-admin">⚙️ Admin</a>
+                {% endif %}
+                <a href="{{ url_for('main.perfil') }}" class="user-name">👤 {{ current_user.nome }}</a>
+                <a href="{{ url_for('main.logout') }}" class="btn btn-logout">🚪 Sair</a>
+            </div>
+        </header>
+
+        <!-- Filtros -->
+        <section class="filtros-container">
+            <div class="filtros-card">
+                <h3>🔍 Filtros de Busca</h3>
+                <div class="filtros-grid">
+                    <div class="filtro-group">
+                        <label for="filtroTipo">Tipo de Relatório</label>
+                        <select id="filtroTipo">
+                            <option value="todos">Todos os Empréstimos</option>
+                            <option value="ativos">Empréstimos Ativos</option>
+                            <option value="historico">Histórico (Devolvidos)</option>
+                            <option value="atrasados">Empréstimos Atrasados</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filtro-group">
+                        <label for="filtroDepartamento">Departamento</label>
+                        <select id="filtroDepartamento">
+                            <option value="todos">Todos os Departamentos</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filtro-group">
+                        <label for="dataInicio">Data Início</label>
+                        <input type="date" id="dataInicio">
+                    </div>
+                    
+                    <div class="filtro-group">
+                        <label for="dataFim">Data Fim</label>
+                        <input type="date" id="dataFim">
+                    </div>
+                </div>
+                
+                <div class="filtros-actions">
+                    <button id="btnAplicarFiltros" class="btn btn-primary">🔍 Aplicar Filtros</button>
+                    <button id="btnLimparFiltros" class="btn btn-secondary">🔄 Limpar Filtros</button>
+                    <button id="btnExportar" class="btn btn-success">📥 Exportar CSV</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Estatísticas -->
+        <section class="stats-relatorios">
+            <div class="stat-card-relatorio">
+                <div class="stat-icon-relatorio">📊</div>
+                <div class="stat-content-relatorio">
+                    <h3 id="statTotal">0</h3>
+                    <p>Total de Empréstimos</p>
+                </div>
+            </div>
+            
+            <div class="stat-card-relatorio status-ativo">
+                <div class="stat-icon-relatorio">📦</div>
+                <div class="stat-content-relatorio">
+                    <h3 id="statAtivos">0</h3>
+                    <p>Empréstimos Ativos</p>
+                </div>
+            </div>
+            
+            <div class="stat-card-relatorio status-devolvido">
+                <div class="stat-icon-relatorio">✅</div>
+                <div class="stat-content-relatorio">
+                    <h3 id="statDevolvidos">0</h3>
+                    <p>Devolvidos</p>
+                </div>
+            </div>
+            
+            <div class="stat-card-relatorio status-atrasado">
+                <div class="stat-icon-relatorio">⚠️</div>
+                <div class="stat-content-relatorio">
+                    <h3 id="statAtrasados">0</h3>
+                    <p>Atrasados</p>
+                </div>
+            </div>
+            
+            <div class="stat-card-relatorio">
+                <div class="stat-icon-relatorio">📅</div>
+                <div class="stat-content-relatorio">
+                    <h3 id="statDuracaoMedia">0</h3>
+                    <p>Duração Média (dias)</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gráficos -->
+        <section class="graficos-container">
+            <div class="grafico-card">
+                <h3>📈 Empréstimos por Departamento</h3>
+                <canvas id="chartDepartamentos"></canvas>
+            </div>
+            
+            <div class="grafico-card">
+                <h3>🏆 Top 10 Equipamentos Mais Emprestados</h3>
+                <canvas id="chartEquipamentos"></canvas>
+            </div>
+        </section>
+
+        <!-- Tabela de Empréstimos -->
+        <section class="tabela-container">
+            <div class="tabela-header">
+                <h3>📋 Lista de Empréstimos</h3>
+                <div class="tabela-info">
+                    <span id="totalRegistros">0 registros encontrados</span>
+                </div>
+            </div>
+            
+            <div class="table-wrapper">
+                <table class="relatorios-table">
+                    <thead>
+                        <tr>
+                            <th>Equipamento</th>
+                            <th>Responsável</th>
+                            <th>Departamento</th>
+                            <th>Data Empréstimo</th>
+                            <th>Devolução Prevista</th>
+                            <th>Devolução Real</th>
+                            <th>Status</th>
+                            <th>Dias</th>
+                        </tr>
+                    </thead>
+                    <tbody id="emprestimosTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 30px;">
+                                Carregando dados...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Mensagens de feedback -->
+        <div id="mensagem" class="message-relatorio"></div>
+    </div>
+
+    <script>
+        // ID do usuário atual (passado do backend)
+        const CURRENT_USER_ID = {{ current_user.id }};
+    </script>
+    <script src="{{ url_for('static', filename='js/relatorios.js') }}"></script>
+</body>
+</html>

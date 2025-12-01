@@ -17,6 +17,16 @@ Sistema web completo para gerenciamento de equipamentos de TI com controle de es
 - 📅 **Data Prevista**: Controle de datas de devolução prevista
 - 📧 **Contatos**: E-mail e telefone do responsável
 
+### Relatórios e Análises
+- 📊 **Relatórios Completos**: Visualize empréstimos com filtros avançados
+- 🎯 **Filtros Inteligentes**: Ativos, histórico, atrasados, por período e departamento
+- 📈 **Gráficos Interativos**: 
+  - Empréstimos por departamento
+  - Top 10 equipamentos mais emprestados
+- 📊 **Estatísticas Detalhadas**: Total, ativos, devolvidos, atrasados e duração média
+- 📥 **Exportação**: Exporte relatórios para CSV
+- ⚠️ **Alertas Visuais**: Identificação de empréstimos atrasados
+
 ### Dashboard Interativo
 - 📊 **Estatísticas em Tempo Real**:
   - Total de equipamentos
@@ -82,17 +92,20 @@ iventario_true/
 │   │   │   ├── style.css    # Estilos principais
 │   │   │   ├── login.css    # Estilos da tela de login
 │   │   │   ├── perfil.css   # Estilos da tela de perfil
-│   │   │   └── admin.css    # Estilos do painel admin
+│   │   │   ├── admin.css    # Estilos do painel admin
+│   │   │   └── relatorios.css # Estilos da página de relatórios
 │   │   └── js/
 │   │       ├── app.js       # JavaScript principal
 │   │       ├── login.js     # JavaScript do login
 │   │       ├── perfil.js    # JavaScript do perfil
-│   │       └── admin.js     # JavaScript do painel admin
+│   │       ├── admin.js     # JavaScript do painel admin
+│   │       └── relatorios.js # JavaScript dos relatórios
 │   └── templates/
 │       ├── index.html       # Template principal
 │       ├── login.html       # Template de login
 │       ├── perfil.html      # Template de perfil
-│       └── admin.html       # Template do painel admin
+│       ├── admin.html       # Template do painel admin
+│       └── relatorios.html  # Template de relatórios
 ├── instance/
 │   └── inventario.db        # Banco de dados SQLite
 ├── criar_admin.py           # Script para criar admin
@@ -148,6 +161,28 @@ iventario_true/
 3. **Restrições de segurança**:
    - Não é possível desativar, remover admin ou deletar sua própria conta
    - Todas as ações requerem confirmação
+
+### Relatórios de Empréstimos
+
+1. No header, clique no botão **"📊 Relatórios"**
+2. Use os filtros para visualizar:
+   - **Tipo de Relatório**: Todos, Ativos, Histórico (Devolvidos), Atrasados
+   - **Departamento**: Filtre por departamento específico
+   - **Período**: Defina data inicial e final
+3. Visualize as estatísticas:
+   - Total de empréstimos no período
+   - Empréstimos ativos, devolvidos e atrasados
+   - Duração média dos empréstimos
+4. Analise os gráficos:
+   - Empréstimos por departamento (barras)
+   - Top 10 equipamentos mais emprestados (barras horizontais)
+5. Consulte a tabela detalhada com:
+   - Nome do equipamento
+   - Responsável e departamento
+   - Datas de empréstimo, previsão e devolução
+   - Status com identificação visual de atrasados
+   - Quantidade de dias do empréstimo
+6. **Exportar dados**: Clique em "📥 Exportar CSV" para baixar o relatório
 
 ### Adicionar Equipamento
 
@@ -273,6 +308,13 @@ iventario_true/
 - `PUT /admin/usuario/<id>/toggle-ativo` - Ativa/desativa usuário
 - `PUT /admin/usuario/<id>/toggle-admin` - Promove/remove admin
 - `DELETE /admin/usuario/<id>/deletar` - Deleta usuário
+- `POST /admin/usuario/adicionar` - Adiciona novo usuário
+- `PUT /admin/usuario/<id>/editar` - Edita usuário
+
+### Relatórios
+- `GET /relatorios` - Página de relatórios
+- `GET /relatorios/emprestimos` - Dados de empréstimos com filtros (query params: filtro, data_inicio, data_fim, departamento)
+- `GET /relatorios/departamentos` - Lista departamentos únicos
 
 ### Equipamentos
 - `GET /` - Página principal (requer autenticação)
@@ -304,8 +346,8 @@ O sistema é totalmente responsivo e funciona em:
 - [x] Autenticação de usuários
 - [x] Perfil de usuário com alteração de senha
 - [x] Painel administrativo para gerenciar usuários
-- [ ] Relatórios de empréstimos (ativos, histórico, atrasados)
-- [ ] Exportação de dados (PDF, Excel)
+- [x] Relatórios de empréstimos (ativos, histórico, atrasados)
+- [ ] Exportação de relatórios em PDF
 - [ ] Upload de fotos dos equipamentos
 - [ ] Histórico de manutenções
 - [ ] Notificações de devolução próxima ao vencimento
