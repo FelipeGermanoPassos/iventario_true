@@ -118,6 +118,16 @@ iventario_true/
 3. Clique em **"Cadastrar"**
 4. Após o cadastro, faça login com suas credenciais
 
+### Acessar Perfil
+
+1. No header, clique no seu nome (👤 Seu Nome)
+2. Na página de perfil você pode:
+   - **Atualizar dados pessoais**: Nome, email, departamento, telefone
+   - **Alterar senha**: Digite a senha atual e a nova senha
+   - Ver informações da conta (data de cadastro, último acesso)
+3. Clique em **"💾 Salvar Alterações"** para atualizar dados
+4. Clique em **"🔑 Alterar Senha"** para mudar a senha
+
 ### Adicionar Equipamento
 
 1. Na aba **"📦 Estoque"**, clique no botão **"+ Novo Equipamento"**
@@ -233,6 +243,8 @@ iventario_true/
 - `GET /registro` - Página de registro
 - `POST /registro` - Registrar novo usuário
 - `GET /logout` - Deslogar usuário
+- `GET /perfil` - Página de perfil (requer autenticação)
+- `POST /perfil` - Atualizar dados ou alterar senha (requer autenticação)
 
 ### Equipamentos
 - `GET /` - Página principal (requer autenticação)
@@ -262,7 +274,7 @@ O sistema é totalmente responsivo e funciona em:
 ## 🚀 Próximas Melhorias Sugeridas
 
 - [x] Autenticação de usuários
-- [ ] Perfil de usuário com alteração de senha
+- [x] Perfil de usuário com alteração de senha
 - [ ] Painel administrativo para gerenciar usuários
 - [ ] Relatórios de empréstimos (ativos, histórico, atrasados)
 - [ ] Exportação de dados (PDF, Excel)

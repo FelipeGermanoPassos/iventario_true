@@ -13,7 +13,7 @@
             <h1>📊 Inventário de Equipamentos TI</h1>
             <div class="header-buttons">
                 <div class="user-info">
-                    <span class="user-name">👤 {{ current_user.nome }}</span>
+                    <a href="{{ url_for('main.perfil') }}" class="user-name" title="Ver meu perfil">👤 {{ current_user.nome }}</a>
                     <a href="{{ url_for('main.logout') }}" class="btn btn-logout">🚪 Sair</a>
                 </div>
                 <button id="btnNovoEquipamento" class="btn btn-primary">+ Novo Equipamento</button>

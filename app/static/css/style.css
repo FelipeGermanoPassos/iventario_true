@@ -66,6 +66,14 @@ header h1 {
 .user-name {
     font-weight: 500;
     color: var(--text-color);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.user-name:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
 }
 
 .btn-logout {

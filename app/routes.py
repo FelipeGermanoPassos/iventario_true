@@ -71,6 +71,55 @@ def logout():
     logout_user()
     return redirect(url_for('main.login'))
 
+@main.route('/perfil', methods=['GET', 'POST'])
+@login_required
+def perfil():
+    """Página de perfil do usuário"""
+    if request.method == 'POST':
+        data = request.get_json()
+        acao = data.get('acao')
+        
+        if acao == 'atualizar_dados':
+            # Atualiza dados pessoais
+            current_user.nome = data.get('nome', current_user.nome)
+            current_user.departamento = data.get('departamento', current_user.departamento)
+            current_user.telefone = data.get('telefone', current_user.telefone)
+            
+            # Verifica se o email mudou e se já não está em uso
+            novo_email = data.get('email')
+            if novo_email and novo_email != current_user.email:
+                if Usuario.query.filter_by(email=novo_email).first():
+                    return jsonify({'success': False, 'message': 'Este email já está em uso.'}), 400
+                current_user.email = novo_email
+            
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Dados atualizados com sucesso!'})
+        
+        elif acao == 'alterar_senha':
+            # Altera senha
+            senha_atual = data.get('senha_atual')
+            senha_nova = data.get('senha_nova')
+            senha_confirmar = data.get('senha_confirmar')
+            
+            # Validações
+            if not current_user.check_password(senha_atual):
+                return jsonify({'success': False, 'message': 'Senha atual incorreta.'}), 400
+            
+            if len(senha_nova) < 6:
+                return jsonify({'success': False, 'message': 'A nova senha deve ter no mínimo 6 caracteres.'}), 400
+            
+            if senha_nova != senha_confirmar:
+                return jsonify({'success': False, 'message': 'As senhas não coincidem.'}), 400
+            
+            current_user.set_password(senha_nova)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': 'Senha alterada com sucesso!'})
+        
+        return jsonify({'success': False, 'message': 'Ação inválida.'}), 400
+    
+    return render_template('perfil.html')
+
 # ==================== ROTAS PRINCIPAIS ====================
 
 @main.route('/')

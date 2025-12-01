@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - Sistema de Inventário</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/perfil.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👤 Meu Perfil</h1>
+            <div class="header-buttons">
+                <a href="{{ url_for('main.index') }}" class="btn btn-secondary">← Voltar ao Dashboard</a>
+                <a href="{{ url_for('main.logout') }}" class="btn btn-logout">🚪 Sair</a>
+            </div>
+        </header>
+
+        <div class="perfil-container">
+            <!-- Informações do Usuário -->
+            <section class="perfil-section">
+                <div class="section-header">
+                    <h2>📋 Informações Pessoais</h2>
+                </div>
+                <form id="formDados" class="perfil-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nome">Nome Completo *</label>
+                            <input type="text" id="nome" name="nome" value="{{ current_user.nome }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">E-mail *</label>
+                            <input type="email" id="email" name="email" value="{{ current_user.email }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="departamento">Departamento</label>
+                            <input type="text" id="departamento" name="departamento" value="{{ current_user.departamento or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="telefone">Telefone</label>
+                            <input type="tel" id="telefone" name="telefone" value="{{ current_user.telefone or '' }}" placeholder="(00) 00000-0000">
+                        </div>
+                    </div>
+
+                    <div class="form-info">
+                        <p><strong>Cadastrado em:</strong> {{ current_user.data_cadastro.strftime('%d/%m/%Y às %H:%M') }}</p>
+                        {% if current_user.ultimo_acesso %}
+                        <p><strong>Último acesso:</strong> {{ current_user.ultimo_acesso.strftime('%d/%m/%Y às %H:%M') }}</p>
+                        {% endif %}
+                        {% if current_user.is_admin %}
+                        <p class="admin-badge">⭐ Administrador</p>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
+                </form>
+            </section>
+
+            <!-- Alteração de Senha -->
+            <section class="perfil-section">
+                <div class="section-header">
+                    <h2>🔒 Alterar Senha</h2>
+                </div>
+                <form id="formSenha" class="perfil-form">
+                    <div class="form-group">
+                        <label for="senhaAtual">Senha Atual *</label>
+                        <input type="password" id="senhaAtual" name="senha_atual" required placeholder="Digite sua senha atual">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="senhaNova">Nova Senha *</label>
+                        <input type="password" id="senhaNova" name="senha_nova" required placeholder="Mínimo 6 caracteres" minlength="6">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="senhaConfirmar">Confirmar Nova Senha *</label>
+                        <input type="password" id="senhaConfirmar" name="senha_confirmar" required placeholder="Digite a nova senha novamente" minlength="6">
+                    </div>
+
+                    <div class="senha-requisitos">
+                        <p>⚠️ A senha deve conter no mínimo 6 caracteres</p>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning">🔑 Alterar Senha</button>
+                </form>
+            </section>
+        </div>
+
+        <!-- Mensagens de feedback -->
+        <div id="mensagem" class="message-perfil"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/perfil.js') }}"></script>
+</body>
+</html>
