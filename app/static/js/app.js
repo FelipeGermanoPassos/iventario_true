@@ -5,6 +5,7 @@ let equipamentosEstoque = [];
 let editandoId = null;
 let charts = {};
 let categoriaAtual = null;
+let manutencaoEquipamentoId = null;
 
 // Categorias e seus tipos
 const tiposPorCategoria = {
@@ -26,6 +27,7 @@ function configurarEventos() {
     const modal = document.getElementById('modalEquipamento');
     const modalCategoria = document.getElementById('modalCategoria');
     const modalEmprestimo = document.getElementById('modalEmprestimo');
+    const modalManutencao = document.getElementById('modalManutencao');
     
     const btnNovo = document.getElementById('btnNovoEquipamento');
     const btnNovoEmprestimo = document.getElementById('btnNovoEmprestimo');
@@ -34,9 +36,11 @@ function configurarEventos() {
     const closeEquipamento = document.querySelector('.close-equipamento');
     const closeCategoria = document.querySelector('.close-categoria');
     const closeEmprestimo = document.querySelector('.close-emprestimo');
+    const closeManutencao = document.querySelector('.close-manutencao');
     
     const form = document.getElementById('formEquipamento');
     const formEmprestimo = document.getElementById('formEmprestimo');
+    const formManutencao = document.getElementById('formManutencao');
     const searchInput = document.getElementById('searchInput');
     const searchEmprestimoInput = document.getElementById('searchEmprestimoInput');
     const fotoInput = document.getElementById('foto');
@@ -51,6 +55,7 @@ function configurarEventos() {
     if (closeEquipamento) closeEquipamento.onclick = () => fecharModal();
     if (closeCategoria) closeCategoria.onclick = () => fecharModalCategoria();
     if (closeEmprestimo) closeEmprestimo.onclick = () => fecharModalEmprestimo();
+    if (closeManutencao) closeManutencao.onclick = () => fecharModalManutencao();
     
     // Clique fora do modal
     window.onclick = (event) => {
@@ -62,6 +67,9 @@ function configurarEventos() {
         }
         if (event.target === modalEmprestimo) {
             fecharModalEmprestimo();
+        }
+        if (event.target === modalManutencao) {
+            fecharModalManutencao();
         }
     };
 
@@ -75,6 +83,14 @@ function configurarEventos() {
         e.preventDefault();
         salvarEmprestimo();
     };
+    if (formManutencao) {
+        formManutencao.onsubmit = (e) => {
+            e.preventDefault();
+            salvarManutencao();
+        };
+        const btnCancelarManutencao = document.getElementById('btnCancelarManutencao');
+        if (btnCancelarManutencao) btnCancelarManutencao.onclick = () => fecharModalManutencao();
+    }
 
     // Buscas
     searchInput.oninput = (e) => filtrarEquipamentos(e.target.value);
@@ -237,6 +253,7 @@ function renderizarEquipamentos(lista) {
             <td><span class="status-badge status-${eq.status.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}">${eq.status}</span></td>
             <td>
                 <div class="action-buttons">
+                    <button class="btn" onclick="abrirModalManutencao(${eq.id})">🛠️ Manutenção</button>
                     <button class="btn btn-edit" onclick="editarEquipamento(${eq.id})">✏️ Editar</button>
                     <button class="btn btn-danger" onclick="deletarEquipamento(${eq.id})">🗑️ Deletar</button>
                 </div>
@@ -734,5 +751,117 @@ async function deletarEmprestimo(id) {
     } catch (error) {
         console.error('Erro ao deletar empréstimo:', error);
         mostrarAlerta('Erro ao deletar empréstimo', 'error');
+    }
+}
+
+// ===== MANUTENÇÕES =====
+async function abrirModalManutencao(equipamentoId) {
+    manutencaoEquipamentoId = equipamentoId;
+    const modal = document.getElementById('modalManutencao');
+    await carregarManutencoes(equipamentoId);
+    modal.style.display = 'block';
+}
+
+function fecharModalManutencao() {
+    const modal = document.getElementById('modalManutencao');
+    modal.style.display = 'none';
+    manutencaoEquipamentoId = null;
+    document.getElementById('formManutencao')?.reset();
+    document.getElementById('manutencoesBody').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;">Carregando histórico...</td></tr>';
+}
+
+async function carregarManutencoes(equipamentoId) {
+    try {
+        const res = await fetch(`/equipamento/${equipamentoId}/manutencoes`);
+        const data = await res.json();
+        if (data.success) {
+            renderizarManutencoes(data.manutencoes);
+        } else {
+            renderizarManutencoes([]);
+            mostrarAlerta(data.message || 'Erro ao carregar manutenções', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        mostrarAlerta('Erro ao carregar manutenções', 'error');
+    }
+}
+
+function renderizarManutencoes(lista) {
+    const tbody = document.getElementById('manutencoesBody');
+    if (!lista || lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;">Sem registros de manutenção</td></tr>';
+        return;
+    }
+    tbody.innerHTML = lista.map(m => {
+        const inicio = m.data_inicio ? new Date(m.data_inicio).toLocaleDateString('pt-BR') : '-';
+        const fim = m.data_fim ? new Date(m.data_fim).toLocaleDateString('pt-BR') : '-';
+        const custo = (m.custo || m.custo === 0) ? Number(m.custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-';
+        const desc = (m.descricao || '').replace(/\n/g, '<br>');
+        return `
+            <tr>
+                <td>${inicio}</td>
+                <td>${fim}</td>
+                <td>${m.tipo}</td>
+                <td><span class="status-badge">${m.status}</span></td>
+                <td>${m.responsavel || '-'}</td>
+                <td>${m.fornecedor || '-'}</td>
+                <td>${custo === '-' ? '-' : 'R$ ' + custo}</td>
+                <td style="max-width:260px;">${desc || '-'}</td>
+                <td><button class="btn btn-danger" onclick="deletarManutencao(${m.id})">🗑️</button></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function salvarManutencao() {
+    if (!manutencaoEquipamentoId) return;
+    const payload = {
+        tipo: document.getElementById('manTipo').value,
+        status: document.getElementById('manStatus').value,
+        data_inicio: document.getElementById('manDataInicio').value,
+        data_fim: document.getElementById('manDataFim').value,
+        custo: document.getElementById('manCusto').value,
+        responsavel: document.getElementById('manResponsavel').value,
+        fornecedor: document.getElementById('manFornecedor').value,
+        descricao: document.getElementById('manDescricao').value,
+        atualizar_status_equipamento: true
+    };
+    try {
+        const res = await fetch(`/equipamento/${manutencaoEquipamentoId}/manutencao/adicionar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            mostrarAlerta(data.message, 'success');
+            await carregarManutencoes(manutencaoEquipamentoId);
+            document.getElementById('formManutencao').reset();
+            // Atualizar lista e dashboard (status pode mudar para Manutenção)
+            await carregarEquipamentos();
+            await carregarDashboard();
+        } else {
+            mostrarAlerta(data.message || 'Erro ao salvar manutenção', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        mostrarAlerta('Erro ao salvar manutenção', 'error');
+    }
+}
+
+async function deletarManutencao(id) {
+    if (!confirm('Tem certeza que deseja deletar este registro de manutenção?')) return;
+    try {
+        const res = await fetch(`/manutencao/deletar/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            mostrarAlerta(data.message, 'success');
+            if (manutencaoEquipamentoId) await carregarManutencoes(manutencaoEquipamentoId);
+        } else {
+            mostrarAlerta(data.message || 'Erro ao deletar manutenção', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        mostrarAlerta('Erro ao deletar manutenção', 'error');
     }
 }

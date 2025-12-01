@@ -324,6 +324,87 @@
         </div>
     </div>
 
+    <!-- Modal: Manutenções do Equipamento -->
+    <div id="modalManutencao" class="modal">
+        <div class="modal-content">
+            <span class="close close-manutencao">&times;</span>
+            <h2>🛠️ Manutenções do Equipamento</h2>
+            <div class="manutencao-container">
+                <div class="table-container" style="margin-bottom:16px;">
+                    <table class="relatorios-table">
+                        <thead>
+                            <tr>
+                                <th>Data Início</th>
+                                <th>Data Fim</th>
+                                <th>Tipo</th>
+                                <th>Status</th>
+                                <th>Responsável</th>
+                                <th>Fornecedor</th>
+                                <th>Custo (R$)</th>
+                                <th>Descrição</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manutencoesBody">
+                            <tr><td colspan="9" style="text-align:center;padding:24px;">Carregando histórico...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Adicionar Manutenção</h3>
+                <form id="formManutencao" class="perfil-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="manTipo">Tipo</label>
+                            <select id="manTipo">
+                                <option value="Corretiva">Corretiva</option>
+                                <option value="Preventiva">Preventiva</option>
+                                <option value="Atualização">Atualização</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="manStatus">Status</label>
+                            <select id="manStatus">
+                                <option value="Em Andamento">Em Andamento</option>
+                                <option value="Concluída">Concluída</option>
+                                <option value="Cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="manDataInicio">Data Início</label>
+                            <input type="date" id="manDataInicio">
+                        </div>
+                        <div class="form-group">
+                            <label for="manDataFim">Data Fim</label>
+                            <input type="date" id="manDataFim">
+                        </div>
+                        <div class="form-group">
+                            <label for="manCusto">Custo (R$)</label>
+                            <input type="number" id="manCusto" step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="manResponsavel">Responsável</label>
+                            <input type="text" id="manResponsavel">
+                        </div>
+                        <div class="form-group">
+                            <label for="manFornecedor">Fornecedor</label>
+                            <input type="text" id="manFornecedor">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="manDescricao">Descrição</label>
+                            <textarea id="manDescricao" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="btnCancelarManutencao">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
 </body>

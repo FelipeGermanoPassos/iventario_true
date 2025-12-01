@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response, current_app, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models import db, Equipamento, Emprestimo, Usuario, EquipamentoFoto
+from app.models import db, Equipamento, Emprestimo, Usuario, EquipamentoFoto, Manutencao
 from datetime import datetime
 from sqlalchemy import func
 from functools import wraps
@@ -547,6 +547,77 @@ def deletar_equipamento(id):
             'success': False,
             'message': f'Erro ao deletar equipamento: {str(e)}'
         }), 400
+
+
+# ===== ROTAS DE MANUTENÇÕES =====
+
+@main.route('/equipamento/<int:equipamento_id>/manutencoes')
+@login_required
+def listar_manutencoes(equipamento_id):
+    """Lista manutenções de um equipamento (mais recentes primeiro)"""
+    try:
+        equipamento = Equipamento.query.get_or_404(equipamento_id)
+        manutencoes = Manutencao.query.filter_by(equipamento_id=equipamento.id).order_by(Manutencao.data_registro.desc()).all()
+        return jsonify({'success': True, 'manutencoes': [m.to_dict() for m in manutencoes]})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao listar manutenções: {str(e)}'}), 400
+
+
+@main.route('/equipamento/<int:equipamento_id>/manutencao/adicionar', methods=['POST'])
+@login_required
+def adicionar_manutencao(equipamento_id):
+    """Adiciona uma manutenção ao equipamento"""
+    try:
+        equipamento = Equipamento.query.get_or_404(equipamento_id)
+        data = request.get_json()
+
+        # Parse datas e campos opcionais
+        data_inicio = datetime.strptime(data['data_inicio'], '%Y-%m-%d').date() if data.get('data_inicio') else None
+        data_fim = datetime.strptime(data['data_fim'], '%Y-%m-%d').date() if data.get('data_fim') else None
+        custo = float(data['custo']) if data.get('custo') not in (None, '') else None
+
+        manutencao = Manutencao(
+            equipamento_id=equipamento.id,
+            tipo=data.get('tipo', 'Corretiva'),
+            descricao=data.get('descricao'),
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            custo=custo,
+            responsavel=data.get('responsavel'),
+            fornecedor=data.get('fornecedor'),
+            status=data.get('status', 'Em Andamento')
+        )
+
+        # Atualiza status do equipamento se solicitado
+        if data.get('atualizar_status_equipamento', True):
+            if manutencao.status == 'Em Andamento':
+                equipamento.status = 'Manutenção'
+            elif manutencao.status == 'Concluída' and equipamento.status == 'Manutenção':
+                # Não forçamos retorno ao Estoque automaticamente sem contexto; opcional
+                pass
+
+        db.session.add(manutencao)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Manutenção registrada com sucesso!', 'manutencao': manutencao.to_dict()})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao adicionar manutenção: {str(e)}'}), 400
+
+
+@main.route('/manutencao/deletar/<int:id>', methods=['DELETE'])
+@login_required
+def deletar_manutencao(id):
+    """Remove um registro de manutenção"""
+    try:
+        manutencao = Manutencao.query.get_or_404(id)
+        db.session.delete(manutencao)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Manutenção deletada com sucesso!'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao deletar manutenção: {str(e)}'}), 400
 
 
 # ===== ROTAS DE EMPRÉSTIMOS =====

@@ -70,6 +70,7 @@ class Equipamento(db.Model):
     
     # Relacionamentos
     fotos = db.relationship('EquipamentoFoto', backref='equipamento', lazy=True, cascade="all, delete-orphan")
+    manutencoes = db.relationship('Manutencao', backref='equipamento', lazy=True, cascade="all, delete-orphan")
     
     def to_dict(self):
         """Converte o objeto para dicionário"""
@@ -177,3 +178,38 @@ class EquipamentoFoto(db.Model):
 
     def __repr__(self):
         return f'<EquipamentoFoto {self.id} - Eq {self.equipamento_id}>'
+
+
+class Manutencao(db.Model):
+    """Histórico de manutenções de equipamentos"""
+    __tablename__ = 'manutencoes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    equipamento_id = db.Column(db.Integer, db.ForeignKey('equipamentos.id'), nullable=False)
+    tipo = db.Column(db.String(50), nullable=False)  # Corretiva, Preventiva, Atualização, Outros
+    descricao = db.Column(db.Text)
+    data_inicio = db.Column(db.Date)
+    data_fim = db.Column(db.Date)
+    custo = db.Column(db.Float)
+    responsavel = db.Column(db.String(100))
+    fornecedor = db.Column(db.String(100))
+    status = db.Column(db.String(20), default='Em Andamento')  # Em Andamento, Concluída, Cancelada
+    data_registro = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'equipamento_id': self.equipamento_id,
+            'tipo': self.tipo,
+            'descricao': self.descricao,
+            'data_inicio': self.data_inicio.strftime('%Y-%m-%d') if self.data_inicio else None,
+            'data_fim': self.data_fim.strftime('%Y-%m-%d') if self.data_fim else None,
+            'custo': self.custo,
+            'responsavel': self.responsavel,
+            'fornecedor': self.fornecedor,
+            'status': self.status,
+            'data_registro': self.data_registro.strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+    def __repr__(self):
+        return f'<Manutencao {self.id} - Eq {self.equipamento_id}>'
