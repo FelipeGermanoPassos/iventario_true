@@ -1,0 +1,703 @@
+// Variáveis globais
+let equipamentos = [];
+let emprestimos = [];
+let equipamentosEstoque = [];
+let editandoId = null;
+let charts = {};
+let categoriaAtual = null;
+
+// Categorias e seus tipos
+const tiposPorCategoria = {
+    computador: ['Desktop', 'All-in-One', 'Workstation', 'Servidor', 'Mini PC'],
+    notebook: ['Notebook', 'Ultrabook', 'Chromebook', '2 em 1'],
+    periferico: ['Monitor', 'Impressora', 'Scanner', 'Teclado', 'Mouse', 'Webcam', 'Headset', 'Switch', 'Roteador', 'Nobreak']
+};
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    carregarDashboard();
+    carregarEquipamentos();
+    carregarEmprestimos();
+    configurarEventos();
+});
+
+// Configurar eventos
+function configurarEventos() {
+    const modal = document.getElementById('modalEquipamento');
+    const modalCategoria = document.getElementById('modalCategoria');
+    const modalEmprestimo = document.getElementById('modalEmprestimo');
+    
+    const btnNovo = document.getElementById('btnNovoEquipamento');
+    const btnNovoEmprestimo = document.getElementById('btnNovoEmprestimo');
+    const btnCancelar = document.getElementById('btnCancelar');
+    
+    const closeEquipamento = document.querySelector('.close-equipamento');
+    const closeCategoria = document.querySelector('.close-categoria');
+    const closeEmprestimo = document.querySelector('.close-emprestimo');
+    
+    const form = document.getElementById('formEquipamento');
+    const formEmprestimo = document.getElementById('formEmprestimo');
+    const searchInput = document.getElementById('searchInput');
+    const searchEmprestimoInput = document.getElementById('searchEmprestimoInput');
+
+    // Botões de ação
+    btnNovo.onclick = () => abrirModalCategoria();
+    btnNovoEmprestimo.onclick = () => abrirModalEmprestimo();
+    btnCancelar.onclick = () => fecharModal();
+    
+    // Botões X de fechar
+    if (closeEquipamento) closeEquipamento.onclick = () => fecharModal();
+    if (closeCategoria) closeCategoria.onclick = () => fecharModalCategoria();
+    if (closeEmprestimo) closeEmprestimo.onclick = () => fecharModalEmprestimo();
+    
+    // Clique fora do modal
+    window.onclick = (event) => {
+        if (event.target === modal) {
+            fecharModal();
+        }
+        if (event.target === modalCategoria) {
+            fecharModalCategoria();
+        }
+        if (event.target === modalEmprestimo) {
+            fecharModalEmprestimo();
+        }
+    };
+
+    // Formulários
+    form.onsubmit = (e) => {
+        e.preventDefault();
+        salvarEquipamento();
+    };
+    
+    formEmprestimo.onsubmit = (e) => {
+        e.preventDefault();
+        salvarEmprestimo();
+    };
+
+    // Buscas
+    searchInput.oninput = (e) => filtrarEquipamentos(e.target.value);
+    if (searchEmprestimoInput) {
+        searchEmprestimoInput.oninput = (e) => filtrarEmprestimos(e.target.value);
+    }
+}
+
+// Tabs
+function mostrarTab(tab) {
+    console.log('Mudando para tab:', tab);
+    
+    // Ocultar todas as tabs
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+    
+    // Mostrar tab selecionada
+    if (tab === 'estoque') {
+        const tabEstoque = document.getElementById('tabEstoque');
+        if (tabEstoque) tabEstoque.classList.add('active');
+        document.querySelectorAll('.tab-button')[0].classList.add('active');
+    } else if (tab === 'emprestimos') {
+        const tabEmprestimos = document.getElementById('tabEmprestimos');
+        if (tabEmprestimos) tabEmprestimos.classList.add('active');
+        document.querySelectorAll('.tab-button')[1].classList.add('active');
+        carregarEmprestimos();
+    }
+}
+
+// Dashboard
+async function carregarDashboard() {
+    try {
+        const response = await fetch('/dashboard-data');
+        const data = await response.json();
+
+        // Atualizar estatísticas
+        document.getElementById('totalEquipamentos').textContent = data.total_equipamentos;
+        document.getElementById('equipamentosEstoque').textContent = data.equipamentos_estoque;
+        document.getElementById('equipamentosEmprestados').textContent = data.equipamentos_emprestados;
+        document.getElementById('valorTotal').textContent = 
+            `R$ ${data.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+        // Criar gráficos
+        criarGraficos(data);
+    } catch (error) {
+        console.error('Erro ao carregar dashboard:', error);
+        mostrarAlerta('Erro ao carregar dashboard', 'error');
+    }
+}
+
+function criarGraficos(data) {
+    // Gráfico de Status
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    if (charts.status) charts.status.destroy();
+    charts.status = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: data.status.map(s => s.name),
+            datasets: [{
+                data: data.status.map(s => s.value),
+                backgroundColor: ['#10b981', '#2563eb', '#ef4444', '#f59e0b'],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Gráfico de Tipos
+    const tipoCtx = document.getElementById('tipoChart').getContext('2d');
+    if (charts.tipo) charts.tipo.destroy();
+    charts.tipo = new Chart(tipoCtx, {
+        type: 'bar',
+        data: {
+            labels: data.tipos.map(t => t.name),
+            datasets: [{
+                label: 'Quantidade',
+                data: data.tipos.map(t => t.value),
+                backgroundColor: '#2563eb',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+
+    // Remover gráfico de localizações (não usado mais)
+    if (charts.localizacao) {
+        charts.localizacao.destroy();
+        charts.localizacao = null;
+    }
+}
+
+// Equipamentos
+async function carregarEquipamentos() {
+    try {
+        const response = await fetch('/equipamentos');
+        equipamentos = await response.json();
+        renderizarEquipamentos(equipamentos);
+    } catch (error) {
+        console.error('Erro ao carregar equipamentos:', error);
+        mostrarAlerta('Erro ao carregar equipamentos', 'error');
+    }
+}
+
+function renderizarEquipamentos(lista) {
+    const tbody = document.getElementById('equipamentosBody');
+    
+    if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhum equipamento cadastrado</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = lista.map(eq => `
+        <tr>
+            <td>${eq.nome}</td>
+            <td>${eq.tipo}</td>
+            <td>${eq.marca}</td>
+            <td>${eq.modelo}</td>
+            <td>${eq.numero_serie}</td>
+            <td><span class="status-badge status-${eq.status.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}">${eq.status}</span></td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-edit" onclick="editarEquipamento(${eq.id})">✏️ Editar</button>
+                    <button class="btn btn-danger" onclick="deletarEquipamento(${eq.id})">🗑️ Deletar</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filtrarEquipamentos(termo) {
+    const termoLower = termo.toLowerCase();
+    const filtrados = equipamentos.filter(eq => 
+        eq.nome.toLowerCase().includes(termoLower) ||
+        eq.tipo.toLowerCase().includes(termoLower) ||
+        eq.marca.toLowerCase().includes(termoLower) ||
+        eq.modelo.toLowerCase().includes(termoLower) ||
+        eq.numero_serie.toLowerCase().includes(termoLower) ||
+        eq.status.toLowerCase().includes(termoLower)
+    );
+    renderizarEquipamentos(filtrados);
+}
+
+// Modal de Categoria
+function abrirModalCategoria() {
+    const modalCategoria = document.getElementById('modalCategoria');
+    modalCategoria.style.display = 'block';
+}
+
+function fecharModalCategoria() {
+    const modalCategoria = document.getElementById('modalCategoria');
+    modalCategoria.style.display = 'none';
+}
+
+function selecionarCategoria(categoria) {
+    categoriaAtual = categoria;
+    fecharModalCategoria();
+    abrirModal(null, categoria);
+}
+
+// Modal
+function abrirModal(equipamento = null, categoria = null) {
+    const modal = document.getElementById('modalEquipamento');
+    const title = document.getElementById('modalTitle');
+    const form = document.getElementById('formEquipamento');
+
+    if (equipamento) {
+        title.textContent = 'Editar Equipamento';
+        editandoId = equipamento.id;
+        // Detectar categoria baseada no tipo do equipamento
+        for (let cat in tiposPorCategoria) {
+            if (tiposPorCategoria[cat].includes(equipamento.tipo)) {
+                categoriaAtual = cat;
+                break;
+            }
+        }
+        // Primeiro configura os campos e depois preenche
+        configurarCamposPorCategoria(categoriaAtual);
+        preencherFormulario(equipamento);
+    } else {
+        title.textContent = 'Adicionar Equipamento';
+        editandoId = null;
+        form.reset();
+        categoriaAtual = categoria;
+        configurarCamposPorCategoria(categoria);
+    }
+
+    modal.style.display = 'block';
+}
+
+function configurarCamposPorCategoria(categoria) {
+    // Ocultar todos os campos específicos
+    document.querySelectorAll('.campo-computador, .campo-notebook, .campo-periferico').forEach(el => {
+        el.style.display = 'none';
+        const input = el.querySelector('input, select, textarea');
+        if (input) input.removeAttribute('required');
+    });
+    
+    // Mostrar campos específicos da categoria
+    if (categoria === 'computador' || categoria === 'notebook') {
+        document.querySelectorAll(`.campo-${categoria}`).forEach(el => {
+            el.style.display = 'block';
+        });
+        
+        // Tornar RAM e Armazenamento obrigatórios para computadores e notebooks
+        const ramInput = document.getElementById('memoria_ram');
+        const armazenamentoInput = document.getElementById('armazenamento');
+        if (ramInput) ramInput.setAttribute('required', 'required');
+        if (armazenamentoInput) armazenamentoInput.setAttribute('required', 'required');
+    } else if (categoria === 'periferico') {
+        document.querySelectorAll('.campo-periferico').forEach(el => {
+            el.style.display = 'block';
+        });
+    }
+    
+    // Preencher opções de tipo baseado na categoria
+    const tipoSelect = document.getElementById('tipo');
+    tipoSelect.innerHTML = '<option value="">Selecione...</option>';
+    
+    if (categoria && tiposPorCategoria[categoria]) {
+        tiposPorCategoria[categoria].forEach(tipo => {
+            const option = document.createElement('option');
+            option.value = tipo;
+            option.textContent = tipo;
+            tipoSelect.appendChild(option);
+        });
+    }
+}
+
+function fecharModal() {
+    const modal = document.getElementById('modalEquipamento');
+    modal.style.display = 'none';
+    editandoId = null;
+    categoriaAtual = null;
+    document.getElementById('formEquipamento').reset();
+    
+    // Limpar campos específicos
+    document.querySelectorAll('.campo-computador, .campo-notebook, .campo-periferico').forEach(el => {
+        el.style.display = 'none';
+    });
+    
+    // Resetar opções do status para o padrão
+    const statusSelect = document.getElementById('status');
+    statusSelect.innerHTML = `
+        <option value="Estoque">Estoque</option>
+        <option value="Manutenção">Manutenção</option>
+        <option value="Inativo">Inativo</option>
+    `;
+}
+
+function preencherFormulario(equipamento) {
+    document.getElementById('nome').value = equipamento.nome;
+    document.getElementById('tipo').value = equipamento.tipo;
+    document.getElementById('marca').value = equipamento.marca;
+    document.getElementById('modelo').value = equipamento.modelo;
+    document.getElementById('numero_serie').value = equipamento.numero_serie;
+    
+    // Preencher status - adicionar opção se não existir (como "Emprestado")
+    const statusSelect = document.getElementById('status');
+    const statusValue = equipamento.status;
+    
+    // Verificar se a opção existe
+    let optionExists = false;
+    for (let i = 0; i < statusSelect.options.length; i++) {
+        if (statusSelect.options[i].value === statusValue) {
+            optionExists = true;
+            break;
+        }
+    }
+    
+    // Se não existe, adicionar temporariamente
+    if (!optionExists) {
+        const option = document.createElement('option');
+        option.value = statusValue;
+        option.textContent = statusValue;
+        statusSelect.appendChild(option);
+    }
+    
+    statusSelect.value = statusValue;
+    
+    document.getElementById('processador').value = equipamento.processador || '';
+    document.getElementById('memoria_ram').value = equipamento.memoria_ram || '';
+    document.getElementById('armazenamento').value = equipamento.armazenamento || '';
+    document.getElementById('sistema_operacional').value = equipamento.sistema_operacional || '';
+    document.getElementById('data_aquisicao').value = equipamento.data_aquisicao || '';
+    document.getElementById('valor').value = equipamento.valor || '';
+    document.getElementById('observacoes').value = equipamento.observacoes || '';
+}
+
+// CRUD
+async function salvarEquipamento() {
+    const formData = {
+        nome: document.getElementById('nome').value,
+        tipo: document.getElementById('tipo').value,
+        marca: document.getElementById('marca').value,
+        modelo: document.getElementById('modelo').value,
+        numero_serie: document.getElementById('numero_serie').value,
+        status: document.getElementById('status').value,
+        data_aquisicao: document.getElementById('data_aquisicao').value,
+        valor: document.getElementById('valor').value,
+        observacoes: document.getElementById('observacoes').value
+    };
+    
+    // Adicionar campos específicos baseado na categoria
+    if (categoriaAtual === 'computador' || categoriaAtual === 'notebook') {
+        formData.processador = document.getElementById('processador').value;
+        formData.memoria_ram = document.getElementById('memoria_ram').value;
+        formData.armazenamento = document.getElementById('armazenamento').value;
+        formData.sistema_operacional = document.getElementById('sistema_operacional').value;
+    } else if (categoriaAtual === 'periferico') {
+        // Para periféricos, armazenar conectividade e compatibilidade nas observações
+        const conectividade = document.getElementById('conectividade')?.value;
+        const compatibilidade = document.getElementById('compatibilidade')?.value;
+        
+        let obsExtra = '';
+        if (conectividade) obsExtra += `Conectividade: ${conectividade}\n`;
+        if (compatibilidade) obsExtra += `Compatibilidade: ${compatibilidade}`;
+        
+        if (obsExtra) {
+            formData.observacoes = obsExtra + (formData.observacoes ? '\n\n' + formData.observacoes : '');
+        }
+    }
+
+    try {
+        const url = editandoId ? `/equipamento/editar/${editandoId}` : '/equipamento/adicionar';
+        const method = editandoId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarAlerta(data.message, 'success');
+            fecharModal();
+            carregarEquipamentos();
+            carregarDashboard();
+        } else {
+            mostrarAlerta(data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar equipamento:', error);
+        mostrarAlerta('Erro ao salvar equipamento', 'error');
+    }
+}
+
+async function editarEquipamento(id) {
+    try {
+        const response = await fetch(`/equipamento/${id}`);
+        const equipamento = await response.json();
+        abrirModal(equipamento);
+    } catch (error) {
+        console.error('Erro ao carregar equipamento:', error);
+        mostrarAlerta('Erro ao carregar equipamento', 'error');
+    }
+}
+
+async function deletarEquipamento(id) {
+    if (!confirm('Tem certeza que deseja deletar este equipamento?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/equipamento/deletar/${id}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarAlerta(data.message, 'success');
+            carregarEquipamentos();
+            carregarDashboard();
+        } else {
+            mostrarAlerta(data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao deletar equipamento:', error);
+        mostrarAlerta('Erro ao deletar equipamento', 'error');
+    }
+}
+
+// Alertas
+function mostrarAlerta(mensagem, tipo) {
+    const alertaExistente = document.querySelector('.alert');
+    if (alertaExistente) {
+        alertaExistente.remove();
+    }
+
+    const alerta = document.createElement('div');
+    alerta.className = `alert alert-${tipo}`;
+    alerta.textContent = mensagem;
+
+    const container = document.querySelector('.container');
+    container.insertBefore(alerta, container.firstChild);
+
+    setTimeout(() => {
+        alerta.remove();
+    }, 5000);
+}
+
+
+// ===== FUNÇÕES DE EMPRÉSTIMO =====
+
+async function carregarEmprestimos() {
+    try {
+        const response = await fetch('/emprestimos-ativos');
+        emprestimos = await response.json();
+        renderizarEmprestimos(emprestimos);
+    } catch (error) {
+        console.error('Erro ao carregar empréstimos:', error);
+        mostrarAlerta('Erro ao carregar empréstimos', 'error');
+    }
+}
+
+function renderizarEmprestimos(lista) {
+    const tbody = document.getElementById('emprestimosBody');
+    
+    if (!tbody) {
+        console.error('Elemento emprestimosBody não encontrado');
+        return;
+    }
+    
+    if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px;">Nenhum empréstimo ativo no momento</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = lista.map(emp => {
+        const eq = emp.equipamento;
+        const dataEmprestimo = new Date(emp.data_emprestimo).toLocaleDateString('pt-BR');
+        const dataPrevista = emp.data_devolucao_prevista ? new Date(emp.data_devolucao_prevista).toLocaleDateString('pt-BR') : '-';
+        
+        return `
+            <tr>
+                <td>${eq.nome}</td>
+                <td>${eq.tipo}</td>
+                <td>${eq.numero_serie}</td>
+                <td>${emp.responsavel}</td>
+                <td>${emp.departamento}</td>
+                <td>${dataEmprestimo}</td>
+                <td>${dataPrevista}</td>
+                <td><span class="status-badge status-ativo">Ativo</span></td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-success" onclick="devolverEquipamento(${emp.id})">✓ Devolver</button>
+                        <button class="btn btn-danger" onclick="deletarEmprestimo(${emp.id})">🗑️ Deletar</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filtrarEmprestimos(termo) {
+    const termoLower = termo.toLowerCase();
+    const filtrados = emprestimos.filter(emp => {
+        const eq = emp.equipamento;
+        return eq.nome.toLowerCase().includes(termoLower) ||
+               eq.tipo.toLowerCase().includes(termoLower) ||
+               eq.numero_serie.toLowerCase().includes(termoLower) ||
+               emp.responsavel.toLowerCase().includes(termoLower) ||
+               emp.departamento.toLowerCase().includes(termoLower);
+    });
+    renderizarEmprestimos(filtrados);
+}
+
+async function abrirModalEmprestimo() {
+    const modal = document.getElementById('modalEmprestimo');
+    
+    // Carregar equipamentos disponíveis em estoque
+    try {
+        const response = await fetch('/equipamentos-estoque');
+        equipamentosEstoque = await response.json();
+        
+        if (equipamentosEstoque.length === 0) {
+            mostrarAlerta('Não há equipamentos disponíveis em estoque para empréstimo', 'error');
+            return;
+        }
+        
+        preencherSelectEquipamentos(equipamentosEstoque);
+        modal.style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar equipamentos:', error);
+        mostrarAlerta('Erro ao carregar equipamentos disponíveis', 'error');
+    }
+}
+
+function preencherSelectEquipamentos(lista) {
+    const select = document.getElementById('equipamento_select');
+    select.innerHTML = lista.map(eq => 
+        `<option value="${eq.id}">${eq.nome} - ${eq.tipo} (${eq.numero_serie})</option>`
+    ).join('');
+}
+
+function filtrarEquipamentosEstoque() {
+    const termo = document.getElementById('equipamento_search').value.toLowerCase();
+    const filtrados = equipamentosEstoque.filter(eq => 
+        eq.nome.toLowerCase().includes(termo) ||
+        eq.tipo.toLowerCase().includes(termo) ||
+        eq.numero_serie.toLowerCase().includes(termo)
+    );
+    preencherSelectEquipamentos(filtrados);
+}
+
+function fecharModalEmprestimo() {
+    const modal = document.getElementById('modalEmprestimo');
+    modal.style.display = 'none';
+    document.getElementById('formEmprestimo').reset();
+}
+
+async function salvarEmprestimo() {
+    const formData = {
+        equipamento_id: parseInt(document.getElementById('equipamento_select').value),
+        responsavel: document.getElementById('responsavel').value,
+        departamento: document.getElementById('departamento').value,
+        email_responsavel: document.getElementById('email_responsavel').value,
+        telefone_responsavel: document.getElementById('telefone_responsavel').value,
+        data_devolucao_prevista: document.getElementById('data_devolucao_prevista').value,
+        observacoes: document.getElementById('observacoes_emprestimo').value
+    };
+
+    try {
+        const response = await fetch('/emprestimo/adicionar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarAlerta(data.message, 'success');
+            fecharModalEmprestimo();
+            carregarEmprestimos();
+            carregarEquipamentos();
+            carregarDashboard();
+        } else {
+            mostrarAlerta(data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar empréstimo:', error);
+        mostrarAlerta('Erro ao registrar empréstimo', 'error');
+    }
+}
+
+async function devolverEquipamento(id) {
+    if (!confirm('Confirma a devolução deste equipamento?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/emprestimo/devolver/${id}`, {
+            method: 'PUT'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarAlerta(data.message, 'success');
+            carregarEmprestimos();
+            carregarEquipamentos();
+            carregarDashboard();
+        } else {
+            mostrarAlerta(data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao devolver equipamento:', error);
+        mostrarAlerta('Erro ao registrar devolução', 'error');
+    }
+}
+
+async function deletarEmprestimo(id) {
+    if (!confirm('Tem certeza que deseja deletar este empréstimo?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/emprestimo/deletar/${id}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarAlerta(data.message, 'success');
+            carregarEmprestimos();
+            carregarEquipamentos();
+            carregarDashboard();
+        } else {
+            mostrarAlerta(data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao deletar empréstimo:', error);
+        mostrarAlerta('Erro ao deletar empréstimo', 'error');
+    }
+}
