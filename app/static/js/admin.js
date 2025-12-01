@@ -1,0 +1,405 @@
+// Variável global para armazenar usuários
+let todosUsuarios = [];
+
+// Carrega dados ao iniciar
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded - iniciando');
+    
+    carregarUsuarios();
+    
+    // Event listeners
+    const btnNovoUsuario = document.getElementById('btnNovoUsuario');
+    console.log('Botão Novo Usuário encontrado:', btnNovoUsuario);
+    
+    if (btnNovoUsuario) {
+        btnNovoUsuario.addEventListener('click', abrirModalNovoUsuario);
+        console.log('Event listener adicionado ao botão');
+    } else {
+        console.error('Botão btnNovoUsuario não encontrado!');
+    }
+    
+    const closeBtn = document.querySelector('.close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', fecharModalUsuario);
+    }
+    
+    const formUsuario = document.getElementById('formUsuario');
+    if (formUsuario) {
+        formUsuario.addEventListener('submit', salvarUsuario);
+    }
+    
+    // Fecha modal ao clicar fora
+    window.addEventListener('click', (e) => {
+        const modal = document.getElementById('modalUsuario');
+        if (modal && e.target === modal) {
+            fecharModalUsuario();
+        }
+    });
+    
+    // Máscara de telefone
+    const telefoneInput = document.getElementById('usuarioTelefone');
+    if (telefoneInput) {
+        telefoneInput.addEventListener('input', aplicarMascaraTelefone);
+    }
+    
+    console.log('DOMContentLoaded - concluído');
+});
+
+// Exibe mensagens de feedback
+function mostrarMensagem(texto, tipo = 'info') {
+    const mensagemDiv = document.getElementById('mensagem');
+    mensagemDiv.textContent = texto;
+    mensagemDiv.className = `message-admin ${tipo} show`;
+    
+    setTimeout(() => {
+        limparMensagem();
+    }, 5000);
+}
+
+function limparMensagem() {
+    const mensagemDiv = document.getElementById('mensagem');
+    mensagemDiv.className = 'message-admin';
+    mensagemDiv.textContent = '';
+}
+
+// Carrega lista de usuários
+async function carregarUsuarios() {
+    try {
+        const response = await fetch('/admin/usuarios');
+        const usuarios = await response.json();
+        
+        todosUsuarios = usuarios;
+        atualizarEstatisticas(usuarios);
+        renderizarUsuarios(usuarios);
+        
+    } catch (error) {
+        mostrarMensagem('Erro ao carregar usuários.', 'error');
+        console.error('Erro:', error);
+    }
+}
+
+// Atualiza estatísticas
+function atualizarEstatisticas(usuarios) {
+    const totalUsuarios = usuarios.length;
+    const usuariosAtivos = usuarios.filter(u => u.ativo).length;
+    const administradores = usuarios.filter(u => u.is_admin).length;
+    const usuariosInativos = usuarios.filter(u => !u.ativo).length;
+    
+    document.getElementById('totalUsuarios').textContent = totalUsuarios;
+    document.getElementById('usuariosAtivos').textContent = usuariosAtivos;
+    document.getElementById('administradores').textContent = administradores;
+    document.getElementById('usuariosInativos').textContent = usuariosInativos;
+}
+
+// Renderiza tabela de usuários
+function renderizarUsuarios(usuarios) {
+    const tbody = document.getElementById('usuariosTableBody');
+    tbody.innerHTML = '';
+    
+    if (usuarios.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 30px;">Nenhum usuário encontrado</td></tr>';
+        return;
+    }
+    
+    usuarios.forEach(usuario => {
+        const tr = document.createElement('tr');
+        
+        // Destaca usuário atual
+        if (usuario.id === CURRENT_USER_ID) {
+            tr.classList.add('usuario-atual');
+        }
+        
+        const statusClass = usuario.ativo ? 'status-ativo' : 'status-inativo';
+        const statusText = usuario.ativo ? 'Ativo' : 'Inativo';
+        
+        const tipoClass = usuario.is_admin ? 'tipo-admin' : 'tipo-usuario';
+        const tipoText = usuario.is_admin ? '⭐ Admin' : '👤 Usuário';
+        
+        const dataCadastro = new Date(usuario.data_cadastro).toLocaleDateString('pt-BR');
+        const ultimoAcesso = usuario.ultimo_acesso ? 
+            new Date(usuario.ultimo_acesso).toLocaleDateString('pt-BR') : 
+            'Nunca';
+        
+        tr.innerHTML = `
+            <td><strong>${usuario.nome}</strong></td>
+            <td>${usuario.email}</td>
+            <td>${usuario.departamento || '-'}</td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td><span class="tipo-badge ${tipoClass}">${tipoText}</span></td>
+            <td class="data-text">${dataCadastro}</td>
+            <td class="data-text">${ultimoAcesso}</td>
+            <td>
+                <div class="acoes-cell">
+                    ${usuario.id !== CURRENT_USER_ID ? `
+                        <button class="btn btn-sm btn-toggle-ativo" onclick="toggleAtivo(${usuario.id})" title="${usuario.ativo ? 'Desativar' : 'Ativar'}">
+                            ${usuario.ativo ? '🚫' : '✅'}
+                        </button>
+                        <button class="btn btn-sm btn-toggle-admin" onclick="toggleAdmin(${usuario.id})" title="${usuario.is_admin ? 'Remover Admin' : 'Tornar Admin'}">
+                            ${usuario.is_admin ? '👤' : '⭐'}
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="editarUsuario(${usuario.id})" title="Editar">
+                            ✏️
+                        </button>
+                        <button class="btn btn-sm btn-delete" onclick="deletarUsuario(${usuario.id}, '${usuario.nome}')" title="Deletar">
+                            🗑️
+                        </button>
+                    ` : '<span style="color: #64748b;">Você</span>'}
+                </div>
+            </td>
+        `;
+        
+        tbody.appendChild(tr);
+    });
+}
+
+// Busca de usuários
+document.getElementById('searchUsuario').addEventListener('input', (e) => {
+    const termo = e.target.value.toLowerCase();
+    
+    if (!termo) {
+        renderizarUsuarios(todosUsuarios);
+        return;
+    }
+    
+    const usuariosFiltrados = todosUsuarios.filter(usuario => 
+        usuario.nome.toLowerCase().includes(termo) ||
+        usuario.email.toLowerCase().includes(termo) ||
+        (usuario.departamento && usuario.departamento.toLowerCase().includes(termo))
+    );
+    
+    renderizarUsuarios(usuariosFiltrados);
+});
+
+// Toggle ativo/inativo
+async function toggleAtivo(id) {
+    if (!confirm('Deseja alterar o status deste usuário?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/usuario/${id}/toggle-ativo`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarMensagem(data.message, 'success');
+            await carregarUsuarios();
+        } else {
+            mostrarMensagem(data.message, 'error');
+        }
+    } catch (error) {
+        mostrarMensagem('Erro ao alterar status do usuário.', 'error');
+        console.error('Erro:', error);
+    }
+}
+
+// Toggle admin
+async function toggleAdmin(id) {
+    if (!confirm('Deseja alterar os privilégios deste usuário?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/usuario/${id}/toggle-admin`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarMensagem(data.message, 'success');
+            await carregarUsuarios();
+        } else {
+            mostrarMensagem(data.message, 'error');
+        }
+    } catch (error) {
+        mostrarMensagem('Erro ao alterar privilégios do usuário.', 'error');
+        console.error('Erro:', error);
+    }
+}
+
+// Deletar usuário
+async function deletarUsuario(id, nome) {
+    if (!confirm(`Tem certeza que deseja DELETAR o usuário "${nome}"?\n\nEsta ação não pode ser desfeita!`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/usuario/${id}/deletar`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarMensagem(data.message, 'success');
+            await carregarUsuarios();
+        } else {
+            mostrarMensagem(data.message, 'error');
+        }
+    } catch (error) {
+        mostrarMensagem('Erro ao deletar usuário.', 'error');
+        console.error('Erro:', error);
+    }
+}
+
+// Abre modal para novo usuário
+function abrirModalNovoUsuario() {
+    console.log('Função abrirModalNovoUsuario chamada');
+    
+    const modal = document.getElementById('modalUsuario');
+    console.log('Modal encontrado:', modal);
+    
+    document.getElementById('modalTitulo').textContent = 'Novo Usuário';
+    document.getElementById('usuarioId').value = '';
+    document.getElementById('formUsuario').reset();
+    document.getElementById('usuarioAtivo').checked = true;
+    
+    // Senha obrigatória para novo usuário
+    document.getElementById('usuarioSenha').required = true;
+    document.getElementById('usuarioConfirmarSenha').required = true;
+    document.getElementById('senhaRequired').textContent = '*';
+    document.getElementById('confirmarRequired').textContent = '*';
+    
+    console.log('Adicionando classe show ao modal');
+    modal.classList.add('show');
+    console.log('Classes do modal:', modal.className);
+}
+
+// Abre modal para editar usuário
+async function editarUsuario(id) {
+    try {
+        // Busca dados do usuário
+        const usuario = todosUsuarios.find(u => u.id === id);
+        if (!usuario) {
+            mostrarMensagem('Usuário não encontrado.', 'error');
+            return;
+        }
+        
+        document.getElementById('modalTitulo').textContent = 'Editar Usuário';
+        document.getElementById('usuarioId').value = usuario.id;
+        document.getElementById('usuarioNome').value = usuario.nome;
+        document.getElementById('usuarioEmail').value = usuario.email;
+        document.getElementById('usuarioDepartamento').value = usuario.departamento || '';
+        document.getElementById('usuarioTelefone').value = usuario.telefone || '';
+        document.getElementById('usuarioAdmin').checked = usuario.is_admin;
+        document.getElementById('usuarioAtivo').checked = usuario.ativo;
+        
+        // Senha opcional para edição
+        document.getElementById('usuarioSenha').required = false;
+        document.getElementById('usuarioConfirmarSenha').required = false;
+        document.getElementById('usuarioSenha').value = '';
+        document.getElementById('usuarioConfirmarSenha').value = '';
+        document.getElementById('senhaRequired').textContent = '';
+        document.getElementById('confirmarRequired').textContent = '';
+        
+        document.getElementById('modalUsuario').classList.add('show');
+    } catch (error) {
+        mostrarMensagem('Erro ao carregar dados do usuário.', 'error');
+        console.error('Erro:', error);
+    }
+}
+
+// Fecha modal
+function fecharModalUsuario() {
+    document.getElementById('modalUsuario').classList.remove('show');
+    document.getElementById('formUsuario').reset();
+}
+
+// Salva usuário (criar ou editar)
+async function salvarUsuario(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('usuarioId').value;
+    const nome = document.getElementById('usuarioNome').value;
+    const email = document.getElementById('usuarioEmail').value;
+    const departamento = document.getElementById('usuarioDepartamento').value;
+    const telefone = document.getElementById('usuarioTelefone').value;
+    const senha = document.getElementById('usuarioSenha').value;
+    const confirmarSenha = document.getElementById('usuarioConfirmarSenha').value;
+    const isAdmin = document.getElementById('usuarioAdmin').checked;
+    const ativo = document.getElementById('usuarioAtivo').checked;
+    
+    // Validações
+    if (!id && !senha) {
+        mostrarMensagem('Senha é obrigatória para novo usuário.', 'error');
+        return;
+    }
+    
+    if (senha && senha !== confirmarSenha) {
+        mostrarMensagem('As senhas não coincidem!', 'error');
+        return;
+    }
+    
+    if (senha && senha.length < 6) {
+        mostrarMensagem('A senha deve ter no mínimo 6 caracteres!', 'error');
+        return;
+    }
+    
+    const dados = {
+        nome,
+        email,
+        departamento,
+        telefone,
+        is_admin: isAdmin,
+        ativo
+    };
+    
+    // Adiciona senha apenas se foi preenchida
+    if (senha) {
+        dados.senha = senha;
+    }
+    
+    try {
+        const url = id ? `/admin/usuario/${id}/editar` : '/admin/usuario/adicionar';
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dados)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarMensagem(data.message, 'success');
+            fecharModalUsuario();
+            await carregarUsuarios();
+        } else {
+            mostrarMensagem(data.message, 'error');
+        }
+    } catch (error) {
+        mostrarMensagem('Erro ao salvar usuário.', 'error');
+        console.error('Erro:', error);
+    }
+}
+
+// Máscara de telefone
+function aplicarMascaraTelefone(e) {
+    let valor = e.target.value.replace(/\D/g, '');
+    if (valor.length > 11) valor = valor.slice(0, 11);
+    
+    if (valor.length > 6) {
+        valor = valor.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
+    } else if (valor.length > 2) {
+        valor = valor.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+    } else if (valor.length > 0) {
+        valor = valor.replace(/^(\d*)/, '($1');
+    }
+    
+    e.target.value = valor;
+}

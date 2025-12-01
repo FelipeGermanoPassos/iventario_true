@@ -3,8 +3,18 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app.models import db, Equipamento, Emprestimo, Usuario
 from datetime import datetime
 from sqlalchemy import func
+from functools import wraps
 
 main = Blueprint('main', __name__)
+
+# Decorator para verificar se usuário é admin
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            return jsonify({'success': False, 'message': 'Acesso negado. Apenas administradores.'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
 
 # ==================== ROTAS DE AUTENTICAÇÃO ====================
 
@@ -119,6 +129,182 @@ def perfil():
         return jsonify({'success': False, 'message': 'Ação inválida.'}), 400
     
     return render_template('perfil.html')
+
+# ==================== ROTAS ADMINISTRATIVAS ====================
+
+@main.route('/admin')
+@login_required
+@admin_required
+def admin():
+    """Painel administrativo"""
+    return render_template('admin.html')
+
+@main.route('/admin/usuarios')
+@login_required
+@admin_required
+def listar_usuarios():
+    """Lista todos os usuários"""
+    usuarios = Usuario.query.order_by(Usuario.data_cadastro.desc()).all()
+    return jsonify([usuario.to_dict() for usuario in usuarios])
+
+@main.route('/admin/usuario/<int:id>/toggle-ativo', methods=['PUT'])
+@login_required
+@admin_required
+def toggle_usuario_ativo(id):
+    """Ativa ou desativa um usuário"""
+    try:
+        usuario = Usuario.query.get_or_404(id)
+        
+        # Não permite desativar a si mesmo
+        if usuario.id == current_user.id:
+            return jsonify({'success': False, 'message': 'Você não pode desativar sua própria conta.'}), 400
+        
+        usuario.ativo = not usuario.ativo
+        db.session.commit()
+        
+        status = 'ativado' if usuario.ativo else 'desativado'
+        return jsonify({
+            'success': True,
+            'message': f'Usuário {status} com sucesso!',
+            'usuario': usuario.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao alterar status: {str(e)}'}), 400
+
+@main.route('/admin/usuario/<int:id>/toggle-admin', methods=['PUT'])
+@login_required
+@admin_required
+def toggle_usuario_admin(id):
+    """Torna um usuário admin ou remove privilégios de admin"""
+    try:
+        usuario = Usuario.query.get_or_404(id)
+        
+        # Não permite remover admin de si mesmo
+        if usuario.id == current_user.id:
+            return jsonify({'success': False, 'message': 'Você não pode remover seus próprios privilégios de administrador.'}), 400
+        
+        usuario.is_admin = not usuario.is_admin
+        db.session.commit()
+        
+        status = 'promovido a administrador' if usuario.is_admin else 'removido de administrador'
+        return jsonify({
+            'success': True,
+            'message': f'Usuário {status} com sucesso!',
+            'usuario': usuario.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao alterar privilégios: {str(e)}'}), 400
+
+@main.route('/admin/usuario/<int:id>/deletar', methods=['DELETE'])
+@login_required
+@admin_required
+def deletar_usuario(id):
+    """Deleta um usuário"""
+    try:
+        usuario = Usuario.query.get_or_404(id)
+        
+        # Não permite deletar a si mesmo
+        if usuario.id == current_user.id:
+            return jsonify({'success': False, 'message': 'Você não pode deletar sua própria conta.'}), 400
+        
+        db.session.delete(usuario)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Usuário deletado com sucesso!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao deletar usuário: {str(e)}'}), 400
+
+@main.route('/admin/usuario/adicionar', methods=['POST'])
+@login_required
+@admin_required
+def adicionar_usuario():
+    """Adiciona um novo usuário pelo admin"""
+    try:
+        data = request.get_json()
+        
+        # Valida se o email já existe
+        if Usuario.query.filter_by(email=data.get('email')).first():
+            return jsonify({'success': False, 'message': 'Email já cadastrado.'}), 400
+        
+        # Valida senha
+        if not data.get('senha') or len(data.get('senha')) < 6:
+            return jsonify({'success': False, 'message': 'Senha deve ter no mínimo 6 caracteres.'}), 400
+        
+        # Cria novo usuário
+        novo_usuario = Usuario(
+            nome=data.get('nome'),
+            email=data.get('email'),
+            departamento=data.get('departamento'),
+            telefone=data.get('telefone'),
+            is_admin=data.get('is_admin', False),
+            ativo=data.get('ativo', True)
+        )
+        novo_usuario.set_password(data.get('senha'))
+        
+        db.session.add(novo_usuario)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Usuário criado com sucesso!',
+            'usuario': novo_usuario.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao criar usuário: {str(e)}'}), 400
+
+@main.route('/admin/usuario/<int:id>/editar', methods=['PUT'])
+@login_required
+@admin_required
+def editar_usuario(id):
+    """Edita um usuário existente"""
+    try:
+        usuario = Usuario.query.get_or_404(id)
+        data = request.get_json()
+        
+        # Atualiza dados básicos
+        usuario.nome = data.get('nome', usuario.nome)
+        usuario.departamento = data.get('departamento', usuario.departamento)
+        usuario.telefone = data.get('telefone', usuario.telefone)
+        
+        # Verifica email único se mudou
+        novo_email = data.get('email')
+        if novo_email and novo_email != usuario.email:
+            if Usuario.query.filter_by(email=novo_email).first():
+                return jsonify({'success': False, 'message': 'Email já está em uso.'}), 400
+            usuario.email = novo_email
+        
+        # Atualiza senha se fornecida
+        if data.get('senha'):
+            if len(data.get('senha')) < 6:
+                return jsonify({'success': False, 'message': 'Senha deve ter no mínimo 6 caracteres.'}), 400
+            usuario.set_password(data.get('senha'))
+        
+        # Atualiza status e privilégios (exceto para si mesmo)
+        if usuario.id != current_user.id:
+            if 'is_admin' in data:
+                usuario.is_admin = data.get('is_admin')
+            if 'ativo' in data:
+                usuario.ativo = data.get('ativo')
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Usuário atualizado com sucesso!',
+            'usuario': usuario.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao atualizar usuário: {str(e)}'}), 400
 
 # ==================== ROTAS PRINCIPAIS ====================
 

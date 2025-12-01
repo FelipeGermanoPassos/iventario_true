@@ -80,13 +80,19 @@ iventario_true/
 │   ├── static/
 │   │   ├── css/
 │   │   │   ├── style.css    # Estilos principais
-│   │   │   └── login.css    # Estilos da tela de login
+│   │   │   ├── login.css    # Estilos da tela de login
+│   │   │   ├── perfil.css   # Estilos da tela de perfil
+│   │   │   └── admin.css    # Estilos do painel admin
 │   │   └── js/
 │   │       ├── app.js       # JavaScript principal
-│   │       └── login.js     # JavaScript do login
+│   │       ├── login.js     # JavaScript do login
+│   │       ├── perfil.js    # JavaScript do perfil
+│   │       └── admin.js     # JavaScript do painel admin
 │   └── templates/
 │       ├── index.html       # Template principal
-│       └── login.html       # Template de login
+│       ├── login.html       # Template de login
+│       ├── perfil.html      # Template de perfil
+│       └── admin.html       # Template do painel admin
 ├── instance/
 │   └── inventario.db        # Banco de dados SQLite
 ├── criar_admin.py           # Script para criar admin
@@ -127,6 +133,21 @@ iventario_true/
    - Ver informações da conta (data de cadastro, último acesso)
 3. Clique em **"💾 Salvar Alterações"** para atualizar dados
 4. Clique em **"🔑 Alterar Senha"** para mudar a senha
+
+### Painel Administrativo (Apenas para Admins)
+
+1. No header, clique no botão **"⚙️ Admin"** (visível apenas para administradores)
+2. No painel você pode:
+   - **Visualizar estatísticas**: Total de usuários, ativos, inativos e administradores
+   - **Listar todos os usuários**: Nome, email, departamento, status, tipo
+   - **Buscar usuários**: Filtrar por nome, email ou departamento
+   - **Ativar/Desativar usuário**: Botão 🚫/✅
+   - **Promover a Admin**: Botão ⭐ (torna usuário administrador)
+   - **Remover Admin**: Botão 👤 (remove privilégios de admin)
+   - **Deletar usuário**: Botão 🗑️ (requer confirmação)
+3. **Restrições de segurança**:
+   - Não é possível desativar, remover admin ou deletar sua própria conta
+   - Todas as ações requerem confirmação
 
 ### Adicionar Equipamento
 
@@ -246,6 +267,13 @@ iventario_true/
 - `GET /perfil` - Página de perfil (requer autenticação)
 - `POST /perfil` - Atualizar dados ou alterar senha (requer autenticação)
 
+### Administração (Requer Admin)
+- `GET /admin` - Painel administrativo
+- `GET /admin/usuarios` - Lista todos os usuários
+- `PUT /admin/usuario/<id>/toggle-ativo` - Ativa/desativa usuário
+- `PUT /admin/usuario/<id>/toggle-admin` - Promove/remove admin
+- `DELETE /admin/usuario/<id>/deletar` - Deleta usuário
+
 ### Equipamentos
 - `GET /` - Página principal (requer autenticação)
 - `GET /dashboard-data` - Dados para o dashboard
@@ -275,7 +303,7 @@ O sistema é totalmente responsivo e funciona em:
 
 - [x] Autenticação de usuários
 - [x] Perfil de usuário com alteração de senha
-- [ ] Painel administrativo para gerenciar usuários
+- [x] Painel administrativo para gerenciar usuários
 - [ ] Relatórios de empréstimos (ativos, histórico, atrasados)
 - [ ] Exportação de dados (PDF, Excel)
 - [ ] Upload de fotos dos equipamentos

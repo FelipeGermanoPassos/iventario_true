@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Sistema de Inventário</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚙️ Painel Administrativo</h1>
+            <div class="header-buttons">
+                <a href="{{ url_for('main.index') }}" class="btn btn-secondary">← Voltar ao Dashboard</a>
+                <a href="{{ url_for('main.perfil') }}" class="user-name">👤 {{ current_user.nome }}</a>
+                <a href="{{ url_for('main.logout') }}" class="btn btn-logout">🚪 Sair</a>
+            </div>
+        </header>
+
+        <div class="admin-container">
+            <!-- Estatísticas -->
+            <section class="admin-stats">
+                <div class="stat-card-admin">
+                    <div class="stat-icon-admin">👥</div>
+                    <div class="stat-content-admin">
+                        <h3 id="totalUsuarios">0</h3>
+                        <p>Total de Usuários</p>
+                    </div>
+                </div>
+                <div class="stat-card-admin">
+                    <div class="stat-icon-admin">✅</div>
+                    <div class="stat-content-admin">
+                        <h3 id="usuariosAtivos">0</h3>
+                        <p>Usuários Ativos</p>
+                    </div>
+                </div>
+                <div class="stat-card-admin">
+                    <div class="stat-icon-admin">⭐</div>
+                    <div class="stat-content-admin">
+                        <h3 id="administradores">0</h3>
+                        <p>Administradores</p>
+                    </div>
+                </div>
+                <div class="stat-card-admin">
+                    <div class="stat-icon-admin">🚫</div>
+                    <div class="stat-content-admin">
+                        <h3 id="usuariosInativos">0</h3>
+                        <p>Usuários Inativos</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Lista de Usuários -->
+            <section class="usuarios-section">
+                <div class="section-header">
+                    <h2>👥 Gerenciar Usuários</h2>
+                    <div class="header-actions">
+                        <div class="search-box">
+                            <input type="text" id="searchUsuario" placeholder="🔍 Buscar usuário...">
+                        </div>
+                        <button id="btnNovoUsuario" class="btn btn-primary">+ Novo Usuário</button>
+                    </div>
+                </div>
+
+                <div class="usuarios-table-container">
+                    <table class="usuarios-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Departamento</th>
+                                <th>Status</th>
+                                <th>Tipo</th>
+                                <th>Cadastro</th>
+                                <th>Último Acesso</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usuariosTableBody">
+                            <!-- Preenchido via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- Modal de Adicionar/Editar Usuário -->
+        <div id="modalUsuario" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitulo">Novo Usuário</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <form id="formUsuario">
+                    <input type="hidden" id="usuarioId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="usuarioNome">Nome Completo *</label>
+                            <input type="text" id="usuarioNome" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="usuarioEmail">Email *</label>
+                            <input type="email" id="usuarioEmail" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="usuarioDepartamento">Departamento</label>
+                            <input type="text" id="usuarioDepartamento">
+                        </div>
+                        <div class="form-group">
+                            <label for="usuarioTelefone">Telefone</label>
+                            <input type="tel" id="usuarioTelefone" placeholder="(00) 00000-0000">
+                        </div>
+                    </div>
+
+                    <div class="form-row" id="senhaFields">
+                        <div class="form-group">
+                            <label for="usuarioSenha">Senha <span id="senhaRequired">*</span></label>
+                            <input type="password" id="usuarioSenha" placeholder="Mínimo 6 caracteres" minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="usuarioConfirmarSenha">Confirmar Senha <span id="confirmarRequired">*</span></label>
+                            <input type="password" id="usuarioConfirmarSenha" placeholder="Digite a senha novamente" minlength="6">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="usuarioAdmin">
+                                <span>Administrador</span>
+                            </label>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="usuarioAtivo" checked>
+                                <span>Ativo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalUsuario()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Mensagens de feedback -->
+        <div id="mensagem" class="message-admin"></div>
+    </div>
+
+    <script>
+        // ID do usuário atual (passado do backend)
+        const CURRENT_USER_ID = {{ current_user.id }};
+    </script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+</body>
+</html>

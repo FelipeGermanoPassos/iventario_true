@@ -14,6 +14,9 @@
             <div class="header-buttons">
                 <div class="user-info">
                     <a href="{{ url_for('main.perfil') }}" class="user-name" title="Ver meu perfil">👤 {{ current_user.nome }}</a>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('main.admin') }}" class="btn btn-admin" title="Painel Administrativo">⚙️ Admin</a>
+                    {% endif %}
                     <a href="{{ url_for('main.logout') }}" class="btn btn-logout">🚪 Sair</a>
                 </div>
                 <button id="btnNovoEquipamento" class="btn btn-primary">+ Novo Equipamento</button>
