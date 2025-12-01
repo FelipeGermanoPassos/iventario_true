@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models import db, Equipamento, Emprestimo, Usuario
+from app.models import db, Equipamento, Emprestimo, Usuario, EquipamentoFoto
 from datetime import datetime
 from sqlalchemy import func
 from functools import wraps
@@ -11,6 +11,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from werkzeug.utils import secure_filename
+import os
+import uuid
 
 main = Blueprint('main', __name__)
 
@@ -372,12 +375,42 @@ def obter_equipamento(id):
     equipamento = Equipamento.query.get_or_404(id)
     return jsonify(equipamento.to_dict())
 
+def _allowed_image(filename: str):
+    if not filename or '.' not in filename:
+        return False
+    ext = filename.rsplit('.', 1)[1].lower()
+    return ext in {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+
+def _save_equip_photo(file_storage):
+    """Salva a foto enviada e retorna a URL pública (em /static/uploads/equipamentos)."""
+    if not file_storage or file_storage.filename == '':
+        return None
+    if not _allowed_image(file_storage.filename):
+        raise ValueError('Formato de imagem não permitido. Use PNG, JPG, JPEG, GIF ou WEBP.')
+    filename = secure_filename(file_storage.filename)
+    # Garante um nome único
+    unique_name = f"{uuid.uuid4().hex}_{filename}"
+    upload_dir = current_app.config.get('UPLOAD_FOLDER_EQUIPAMENTOS')
+    os.makedirs(upload_dir, exist_ok=True)
+    full_path = os.path.join(upload_dir, unique_name)
+    file_storage.save(full_path)
+    # URL estática
+    return f"/static/uploads/equipamentos/{unique_name}"
+
+
 @main.route('/equipamento/adicionar', methods=['POST'])
 @login_required
 def adicionar_equipamento():
     """Adiciona um novo equipamento"""
     try:
-        data = request.json
+        data = None
+        is_multipart = request.content_type and 'multipart/form-data' in request.content_type
+        if is_multipart:
+            form = request.form
+            data = {k: form.get(k) for k in form.keys()}
+        else:
+            data = request.get_json(silent=True) or {}
         
         # Converte a data de aquisição se fornecida
         data_aquisicao = None
@@ -401,6 +434,18 @@ def adicionar_equipamento():
         )
         
         db.session.add(equipamento)
+        db.session.flush()  # obter ID antes de possível foto
+
+        # Foto (opcional)
+        if is_multipart and 'foto' in request.files:
+            foto_file = request.files.get('foto')
+            if foto_file and foto_file.filename:
+                url = _save_equip_photo(foto_file)
+                if url:
+                    # Desmarcar outras principais por segurança (novo equipamento não terá)
+                    foto = EquipamentoFoto(equipamento_id=equipamento.id, url=url, principal=True)
+                    db.session.add(foto)
+
         db.session.commit()
         
         return jsonify({
@@ -422,7 +467,12 @@ def editar_equipamento(id):
     """Edita um equipamento existente"""
     try:
         equipamento = Equipamento.query.get_or_404(id)
-        data = request.json
+        is_multipart = request.content_type and 'multipart/form-data' in request.content_type
+        if is_multipart:
+            form = request.form
+            data = {k: form.get(k) for k in form.keys()}
+        else:
+            data = request.get_json(silent=True) or {}
         
         # Atualiza os campos
         equipamento.nome = data.get('nome', equipamento.nome)
@@ -442,6 +492,18 @@ def editar_equipamento(id):
         
         if data.get('valor'):
             equipamento.valor = float(data['valor'])
+
+        # Substituição de foto (opcional)
+        if is_multipart and 'foto' in request.files:
+            foto_file = request.files.get('foto')
+            if foto_file and foto_file.filename:
+                url = _save_equip_photo(foto_file)
+                if url:
+                    # Desmarca anteriores como principal e adiciona nova principal
+                    for f in equipamento.fotos:
+                        f.principal = False
+                    nova = EquipamentoFoto(equipamento_id=equipamento.id, url=url, principal=True)
+                    db.session.add(nova)
         
         db.session.commit()
         

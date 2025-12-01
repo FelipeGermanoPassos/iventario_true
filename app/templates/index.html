@@ -246,6 +246,14 @@
                         <input type="number" id="valor" name="valor" step="0.01" min="0">
                     </div>
                     
+                    <div class="form-group">
+                        <label for="foto">Foto do Equipamento</label>
+                        <input type="file" id="foto" name="foto" accept="image/*" capture="environment">
+                        <div style="margin-top:8px;">
+                            <img id="fotoPreview" src="" alt="Pré-visualização" style="max-width: 160px; max-height: 120px; display: none; border: 1px solid #ddd; border-radius: 6px;" />
+                        </div>
+                    </div>
+                    
                     <div class="form-group full-width">
                         <label for="observacoes">Observações</label>
                         <textarea id="observacoes" name="observacoes" rows="3"></textarea>

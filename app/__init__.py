@@ -11,6 +11,12 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inventario.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
+    # Uploads de fotos (armazenadas em static/uploads/equipamentos)
+    uploads_dir = os.path.join(os.path.dirname(__file__), 'static', 'uploads', 'equipamentos')
+    os.makedirs(uploads_dir, exist_ok=True)
+    app.config['UPLOAD_FOLDER_EQUIPAMENTOS'] = uploads_dir
+    app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB por requisição
+    
     # Inicializa o banco de dados
     from app.models import db, Usuario
     db.init_app(app)

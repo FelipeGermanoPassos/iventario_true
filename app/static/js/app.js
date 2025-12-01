@@ -39,6 +39,8 @@ function configurarEventos() {
     const formEmprestimo = document.getElementById('formEmprestimo');
     const searchInput = document.getElementById('searchInput');
     const searchEmprestimoInput = document.getElementById('searchEmprestimoInput');
+    const fotoInput = document.getElementById('foto');
+    const fotoPreview = document.getElementById('fotoPreview');
 
     // Botões de ação
     btnNovo.onclick = () => abrirModalCategoria();
@@ -78,6 +80,22 @@ function configurarEventos() {
     searchInput.oninput = (e) => filtrarEquipamentos(e.target.value);
     if (searchEmprestimoInput) {
         searchEmprestimoInput.oninput = (e) => filtrarEmprestimos(e.target.value);
+    }
+
+    // Preview da foto
+    if (fotoInput) {
+        fotoInput.onchange = () => {
+            const file = fotoInput.files && fotoInput.files[0];
+            if (!file) {
+                if (fotoPreview) { fotoPreview.style.display = 'none'; fotoPreview.src = ''; }
+                return;
+            }
+            const url = URL.createObjectURL(file);
+            if (fotoPreview) {
+                fotoPreview.src = url;
+                fotoPreview.style.display = 'inline-block';
+            }
+        };
     }
 }
 
@@ -332,6 +350,10 @@ function fecharModal() {
     editandoId = null;
     categoriaAtual = null;
     document.getElementById('formEquipamento').reset();
+    const fotoPreview = document.getElementById('fotoPreview');
+    const fotoInput = document.getElementById('foto');
+    if (fotoPreview) { fotoPreview.style.display = 'none'; fotoPreview.src = ''; }
+    if (fotoInput) { fotoInput.value = ''; }
     
     // Limpar campos específicos
     document.querySelectorAll('.campo-computador, .campo-notebook, .campo-periferico').forEach(el => {
@@ -384,28 +406,38 @@ function preencherFormulario(equipamento) {
     document.getElementById('data_aquisicao').value = equipamento.data_aquisicao || '';
     document.getElementById('valor').value = equipamento.valor || '';
     document.getElementById('observacoes').value = equipamento.observacoes || '';
+    // Foto existente
+    const fotoPreview = document.getElementById('fotoPreview');
+    const fotoInput = document.getElementById('foto');
+    if (fotoInput) { fotoInput.value = ''; }
+    if (equipamento.foto_url && fotoPreview) {
+        fotoPreview.src = equipamento.foto_url;
+        fotoPreview.style.display = 'inline-block';
+    } else if (fotoPreview) {
+        fotoPreview.style.display = 'none';
+        fotoPreview.src = '';
+    }
 }
 
 // CRUD
 async function salvarEquipamento() {
-    const formData = {
-        nome: document.getElementById('nome').value,
-        tipo: document.getElementById('tipo').value,
-        marca: document.getElementById('marca').value,
-        modelo: document.getElementById('modelo').value,
-        numero_serie: document.getElementById('numero_serie').value,
-        status: document.getElementById('status').value,
-        data_aquisicao: document.getElementById('data_aquisicao').value,
-        valor: document.getElementById('valor').value,
-        observacoes: document.getElementById('observacoes').value
-    };
+    const fd = new FormData();
+    fd.append('nome', document.getElementById('nome').value);
+    fd.append('tipo', document.getElementById('tipo').value);
+    fd.append('marca', document.getElementById('marca').value);
+    fd.append('modelo', document.getElementById('modelo').value);
+    fd.append('numero_serie', document.getElementById('numero_serie').value);
+    fd.append('status', document.getElementById('status').value);
+    fd.append('data_aquisicao', document.getElementById('data_aquisicao').value);
+    fd.append('valor', document.getElementById('valor').value);
+    fd.append('observacoes', document.getElementById('observacoes').value);
     
     // Adicionar campos específicos baseado na categoria
     if (categoriaAtual === 'computador' || categoriaAtual === 'notebook') {
-        formData.processador = document.getElementById('processador').value;
-        formData.memoria_ram = document.getElementById('memoria_ram').value;
-        formData.armazenamento = document.getElementById('armazenamento').value;
-        formData.sistema_operacional = document.getElementById('sistema_operacional').value;
+        fd.append('processador', document.getElementById('processador').value);
+        fd.append('memoria_ram', document.getElementById('memoria_ram').value);
+        fd.append('armazenamento', document.getElementById('armazenamento').value);
+        fd.append('sistema_operacional', document.getElementById('sistema_operacional').value);
     } else if (categoriaAtual === 'periferico') {
         // Para periféricos, armazenar conectividade e compatibilidade nas observações
         const conectividade = document.getElementById('conectividade')?.value;
@@ -416,8 +448,14 @@ async function salvarEquipamento() {
         if (compatibilidade) obsExtra += `Compatibilidade: ${compatibilidade}`;
         
         if (obsExtra) {
-            formData.observacoes = obsExtra + (formData.observacoes ? '\n\n' + formData.observacoes : '');
+            const atual = document.getElementById('observacoes').value;
+            fd.set('observacoes', obsExtra + (atual ? '\n\n' + atual : ''));
         }
+    }
+    // Foto (se selecionada)
+    const fotoInput = document.getElementById('foto');
+    if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+        fd.append('foto', fotoInput.files[0]);
     }
 
     try {
@@ -426,10 +464,7 @@ async function salvarEquipamento() {
 
         const response = await fetch(url, {
             method: method,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
+            body: fd
         });
 
         const data = await response.json();

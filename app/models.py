@@ -68,8 +68,18 @@ class Equipamento(db.Model):
     data_cadastro = db.Column(db.DateTime, default=datetime.utcnow)
     data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Relacionamentos
+    fotos = db.relationship('EquipamentoFoto', backref='equipamento', lazy=True, cascade="all, delete-orphan")
+    
     def to_dict(self):
         """Converte o objeto para dicionário"""
+        # Foto principal (se existir)
+        foto_principal = None
+        if hasattr(self, 'fotos') and self.fotos:
+            # Tenta achar a principal, senão pega a primeira
+            principais = [f.url for f in self.fotos if f.principal]
+            foto_principal = principais[0] if principais else self.fotos[0].url
+        
         return {
             'id': self.id,
             'nome': self.nome,
@@ -86,7 +96,8 @@ class Equipamento(db.Model):
             'valor': self.valor,
             'observacoes': self.observacoes,
             'data_cadastro': self.data_cadastro.strftime('%Y-%m-%d %H:%M:%S'),
-            'data_atualizacao': self.data_atualizacao.strftime('%Y-%m-%d %H:%M:%S')
+            'data_atualizacao': self.data_atualizacao.strftime('%Y-%m-%d %H:%M:%S'),
+            'foto_url': foto_principal
         }
     
     def __repr__(self):
@@ -143,3 +154,26 @@ class Emprestimo(db.Model):
     
     def __repr__(self):
         return f'<Emprestimo {self.id} - {self.responsavel}>'
+
+
+class EquipamentoFoto(db.Model):
+    """Fotos associadas a equipamentos"""
+    __tablename__ = 'equipamentos_fotos'
+
+    id = db.Column(db.Integer, primary_key=True)
+    equipamento_id = db.Column(db.Integer, db.ForeignKey('equipamentos.id'), nullable=False)
+    url = db.Column(db.String(255), nullable=False)
+    principal = db.Column(db.Boolean, default=True)
+    data_upload = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'equipamento_id': self.equipamento_id,
+            'url': self.url,
+            'principal': self.principal,
+            'data_upload': self.data_upload.strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+    def __repr__(self):
+        return f'<EquipamentoFoto {self.id} - Eq {self.equipamento_id}>'
