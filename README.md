@@ -81,6 +81,39 @@ python run.py
 
 Abra seu navegador em: **http://localhost:5000**
 
+### 5. Instalar no Android (PWA)
+
+Para instalar o sistema como aplicativo no Android (PWA), é necessário acessar via HTTPS no celular.
+
+1) Execute o servidor local no PC
+
+```powershell
+python run.py
+```
+
+2) Exponha o servidor com HTTPS (ex.: ngrok)
+
+Instale e rode o ngrok (ou similar) para gerar uma URL HTTPS pública que aponte para seu servidor local.
+
+```powershell
+ngrok http http://localhost:5000
+```
+
+3) No Android (Chrome)
+- Abra a URL HTTPS gerada pelo ngrok (ex.: https://xxxxx.ngrok-free.app)
+- Aguarde carregar e toque em “Instalar app” (ou abra o menu do Chrome › “Adicionar à tela inicial”)
+- Abra o app instalado da tela inicial (modo tela cheia)
+
+4) Dicas e permissões
+- Conceda permissão de câmera ao app para tirar fotos dos equipamentos direto do celular
+- Para melhor experiência, adicione ícones PNG em `app/static/icons`:
+   - `icon-192.png` (192x192)
+   - `icon-512.png` (512x512)
+
+5) Observações importantes
+- Service Worker (necessário para PWA) exige HTTPS em dispositivos móveis
+- Se atualizou o sistema e não viu mudanças no app, feche e reabra o aplicativo (o SW atualiza em segundo plano)
+
 ## 📂 Estrutura do Projeto
 
 ```
