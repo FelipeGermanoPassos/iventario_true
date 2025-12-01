@@ -840,6 +840,8 @@ async function salvarManutencao() {
             // Atualizar lista e dashboard (status pode mudar para Manutenção)
             await carregarEquipamentos();
             await carregarDashboard();
+            // Fechar o modal após salvar com sucesso
+            fecharModalManutencao();
         } else {
             mostrarAlerta(data.message || 'Erro ao salvar manutenção', 'error');
         }
