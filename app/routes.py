@@ -642,14 +642,14 @@ def relatorios_emprestimos():
         data_fim = request.args.get('data_fim')
         departamento = request.args.get('departamento')
         
-        # Query base
-        query = Emprestimo.query
+        # Query base com join para trazer equipamento junto
+        query = Emprestimo.query.join(Equipamento, Emprestimo.equipamento_id == Equipamento.id)
         
         # Aplicar filtros
         if filtro == 'ativos':
-            query = query.filter_by(status='Ativo')
+            query = query.filter(Emprestimo.status == 'Ativo')
         elif filtro == 'historico':
-            query = query.filter_by(status='Devolvido')
+            query = query.filter(Emprestimo.status == 'Devolvido')
         elif filtro == 'atrasados':
             hoje = datetime.utcnow().date()
             query = query.filter(
@@ -670,7 +670,7 @@ def relatorios_emprestimos():
         
         # Filtro por departamento
         if departamento and departamento != 'todos':
-            query = query.filter_by(departamento=departamento)
+            query = query.filter(Emprestimo.departamento == departamento)
         
         # Ordenar por data de empréstimo (mais recentes primeiro)
         emprestimos = query.order_by(Emprestimo.data_emprestimo.desc()).all()
@@ -700,9 +700,8 @@ def relatorios_emprestimos():
         # Equipamentos mais emprestados
         equipamentos_count = {}
         for e in emprestimos:
-            equipamento = Equipamento.query.get(e.equipamento_id)
-            if equipamento:
-                nome = equipamento.nome
+            if e.equipamento:
+                nome = e.equipamento.nome
                 equipamentos_count[nome] = equipamentos_count.get(nome, 0) + 1
         
         # Top 10 equipamentos
@@ -723,6 +722,9 @@ def relatorios_emprestimos():
         })
         
     except Exception as e:
+        print(f"Erro ao gerar relatório: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'message': f'Erro ao gerar relatório: {str(e)}'

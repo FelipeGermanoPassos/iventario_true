@@ -114,9 +114,14 @@ class Emprestimo(db.Model):
     
     def to_dict(self):
         """Converte o objeto para dicionário"""
+        equipamento_nome = None
+        if self.equipamento:
+            equipamento_nome = f"{self.equipamento.nome} - {self.equipamento.marca} {self.equipamento.modelo}"
+        
         return {
             'id': self.id,
             'equipamento_id': self.equipamento_id,
+            'equipamento_nome': equipamento_nome,
             'equipamento': {
                 'id': self.equipamento.id,
                 'nome': self.equipamento.nome,

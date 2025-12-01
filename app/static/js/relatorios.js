@@ -60,7 +60,15 @@ async function aplicarFiltros() {
         }
         
         const response = await fetch(`/relatorios/emprestimos?${params.toString()}`);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Erro na resposta:', response.status, errorText);
+            throw new Error(`Erro ${response.status}: ${errorText}`);
+        }
+        
         const data = await response.json();
+        console.log('Dados recebidos:', data);
         
         if (data.success) {
             todosEmprestimos = data.emprestimos;
@@ -75,8 +83,8 @@ async function aplicarFiltros() {
         }
         
     } catch (error) {
-        mostrarMensagem('Erro ao carregar relatório.', 'error');
-        console.error('Erro:', error);
+        console.error('Erro detalhado:', error);
+        mostrarMensagem(`Erro ao carregar relatório: ${error.message}`, 'error');
     }
 }
 
@@ -247,7 +255,7 @@ function renderizarGraficos(emprestimosPorDept, topEquipamentos) {
     const dataEquip = topEquipamentos.map(e => e.quantidade);
     
     chartEquipamentos = new Chart(ctxEquip, {
-        type: 'horizontalBar',
+        type: 'bar',
         data: {
             labels: labelsEquip,
             datasets: [{
