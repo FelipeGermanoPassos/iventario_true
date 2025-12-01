@@ -620,6 +620,58 @@ def deletar_manutencao(id):
         return jsonify({'success': False, 'message': f'Erro ao deletar manutenção: {str(e)}'}), 400
 
 
+@main.route('/manutencao/<int:id>', methods=['GET'])
+@login_required
+def obter_manutencao(id):
+    """Obtém uma manutenção específica"""
+    try:
+        manutencao = Manutencao.query.get_or_404(id)
+        return jsonify({'success': True, 'manutencao': manutencao.to_dict()})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao obter manutenção: {str(e)}'}), 400
+
+
+@main.route('/manutencao/editar/<int:id>', methods=['PUT'])
+@login_required
+def editar_manutencao(id):
+    """Edita uma manutenção existente"""
+    try:
+        manutencao = Manutencao.query.get_or_404(id)
+        data = request.get_json()
+
+        # Parse datas e campos
+        if 'data_inicio' in data:
+            manutencao.data_inicio = datetime.strptime(data['data_inicio'], '%Y-%m-%d').date() if data['data_inicio'] else None
+        if 'data_fim' in data:
+            manutencao.data_fim = datetime.strptime(data['data_fim'], '%Y-%m-%d').date() if data['data_fim'] else None
+        if 'custo' in data:
+            manutencao.custo = float(data['custo']) if data['custo'] not in (None, '') else None
+        if 'tipo' in data:
+            manutencao.tipo = data['tipo'] or manutencao.tipo
+        if 'descricao' in data:
+            manutencao.descricao = data['descricao']
+        if 'responsavel' in data:
+            manutencao.responsavel = data['responsavel']
+        if 'fornecedor' in data:
+            manutencao.fornecedor = data['fornecedor']
+        if 'status' in data:
+            manutencao.status = data['status'] or manutencao.status
+
+        # Atualiza status do equipamento se solicitado
+        if data.get('atualizar_status_equipamento', True):
+            equipamento = Equipamento.query.get(manutencao.equipamento_id)
+            if equipamento:
+                if manutencao.status == 'Em Andamento':
+                    equipamento.status = 'Manutenção'
+                # Mantemos a lógica conservadora; não alteramos automaticamente em 'Concluída'
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Manutenção atualizada com sucesso!', 'manutencao': manutencao.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao atualizar manutenção: {str(e)}'}), 400
+
+
 # ===== ROTAS DE EMPRÉSTIMOS =====
 
 @main.route('/equipamentos-estoque')

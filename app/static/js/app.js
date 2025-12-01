@@ -6,6 +6,8 @@ let editandoId = null;
 let charts = {};
 let categoriaAtual = null;
 let manutencaoEquipamentoId = null;
+let manutencaoEditandoId = null;
+let manutencoesCache = [];
 
 // Categorias e seus tipos
 const tiposPorCategoria = {
@@ -775,7 +777,8 @@ async function carregarManutencoes(equipamentoId) {
         const res = await fetch(`/equipamento/${equipamentoId}/manutencoes`);
         const data = await res.json();
         if (data.success) {
-            renderizarManutencoes(data.manutencoes);
+            manutencoesCache = data.manutencoes || [];
+            renderizarManutencoes(manutencoesCache);
         } else {
             renderizarManutencoes([]);
             mostrarAlerta(data.message || 'Erro ao carregar manutenções', 'error');
@@ -807,7 +810,12 @@ function renderizarManutencoes(lista) {
                 <td>${m.fornecedor || '-'}</td>
                 <td>${custo === '-' ? '-' : 'R$ ' + custo}</td>
                 <td style="max-width:260px;">${desc || '-'}</td>
-                <td><button class="btn btn-danger" onclick="deletarManutencao(${m.id})">🗑️</button></td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-edit" onclick="iniciarEdicaoManutencao(${m.id})">✏️</button>
+                        <button class="btn btn-danger" onclick="deletarManutencao(${m.id})">🗑️</button>
+                    </div>
+                </td>
             </tr>
         `;
     }).join('');
@@ -827,8 +835,11 @@ async function salvarManutencao() {
         atualizar_status_equipamento: true
     };
     try {
-        const res = await fetch(`/equipamento/${manutencaoEquipamentoId}/manutencao/adicionar`, {
-            method: 'POST',
+        const isEditing = !!manutencaoEditandoId;
+        const url = isEditing ? `/manutencao/editar/${manutencaoEditandoId}` : `/equipamento/${manutencaoEquipamentoId}/manutencao/adicionar`;
+        const method = isEditing ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+            method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -836,7 +847,7 @@ async function salvarManutencao() {
         if (data.success) {
             mostrarAlerta(data.message, 'success');
             await carregarManutencoes(manutencaoEquipamentoId);
-            document.getElementById('formManutencao').reset();
+            resetFormularioManutencao();
             // Atualizar lista e dashboard (status pode mudar para Manutenção)
             await carregarEquipamentos();
             await carregarDashboard();
@@ -859,6 +870,7 @@ async function deletarManutencao(id) {
         if (data.success) {
             mostrarAlerta(data.message, 'success');
             if (manutencaoEquipamentoId) await carregarManutencoes(manutencaoEquipamentoId);
+            if (manutencaoEditandoId === id) resetFormularioManutencao();
         } else {
             mostrarAlerta(data.message || 'Erro ao deletar manutenção', 'error');
         }
@@ -866,4 +878,28 @@ async function deletarManutencao(id) {
         console.error(e);
         mostrarAlerta('Erro ao deletar manutenção', 'error');
     }
+}
+
+function iniciarEdicaoManutencao(id) {
+    const m = manutencoesCache.find(x => x.id === id);
+    if (!m) return;
+    manutencaoEditandoId = id;
+    document.getElementById('manTipo').value = m.tipo || 'Corretiva';
+    document.getElementById('manStatus').value = m.status || 'Em Andamento';
+    document.getElementById('manDataInicio').value = m.data_inicio || '';
+    document.getElementById('manDataFim').value = m.data_fim || '';
+    document.getElementById('manCusto').value = m.custo != null ? m.custo : '';
+    document.getElementById('manResponsavel').value = m.responsavel || '';
+    document.getElementById('manFornecedor').value = m.fornecedor || '';
+    document.getElementById('manDescricao').value = m.descricao || '';
+    const submitBtn = document.querySelector('#formManutencao .btn.btn-primary');
+    if (submitBtn) submitBtn.textContent = 'Atualizar';
+}
+
+function resetFormularioManutencao() {
+    manutencaoEditandoId = null;
+    const form = document.getElementById('formManutencao');
+    if (form) form.reset();
+    const submitBtn = document.querySelector('#formManutencao .btn.btn-primary');
+    if (submitBtn) submitBtn.textContent = 'Salvar';
 }
