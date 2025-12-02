@@ -1,0 +1,64 @@
+# Configuração de E-mail para o Sistema de Inventário
+# Copie este arquivo para .env e preencha com suas credenciais
+
+# ====== CONFIGURAÇÃO DE E-MAIL ======
+
+# Habilitar/Desabilitar envio de e-mails (true ou false)
+MAIL_ENABLED=false
+
+# Servidor SMTP
+# Gmail: smtp.gmail.com
+# Outlook/Hotmail: smtp-mail.outlook.com
+# Yahoo: smtp.mail.yahoo.com
+MAIL_SERVER=smtp.gmail.com
+
+# Porta SMTP (geralmente 587 para TLS ou 465 para SSL)
+MAIL_PORT=587
+
+# Usar TLS (true ou false)
+MAIL_USE_TLS=true
+
+# Usar SSL (true ou false) - geralmente false se MAIL_USE_TLS=true
+MAIL_USE_SSL=false
+
+# Seu e-mail (remetente)
+MAIL_USERNAME=seu-email@gmail.com
+
+# Senha do e-mail
+# IMPORTANTE: Para Gmail, use uma "Senha de App" e não sua senha normal
+# Como gerar senha de app no Gmail:
+# 1. Acesse https://myaccount.google.com/security
+# 2. Ative a verificação em duas etapas
+# 3. Vá em "Senhas de app" e gere uma nova senha
+# 4. Use essa senha aqui
+MAIL_PASSWORD=sua-senha-de-app-aqui
+
+# E-mail padrão do remetente (opcional, se não definido usa MAIL_USERNAME)
+MAIL_DEFAULT_SENDER=seu-email@gmail.com
+
+# ====== COMO USAR ======
+
+# Windows PowerShell:
+# $env:MAIL_ENABLED="true"
+# $env:MAIL_SERVER="smtp.gmail.com"
+# $env:MAIL_PORT="587"
+# $env:MAIL_USE_TLS="true"
+# $env:MAIL_USERNAME="seu-email@gmail.com"
+# $env:MAIL_PASSWORD="sua-senha-app"
+# python run.py
+
+# Linux/Mac:
+# export MAIL_ENABLED=true
+# export MAIL_SERVER=smtp.gmail.com
+# export MAIL_PORT=587
+# export MAIL_USE_TLS=true
+# export MAIL_USERNAME=seu-email@gmail.com
+# export MAIL_PASSWORD=sua-senha-app
+# python run.py
+
+# ====== TESTANDO ======
+# Após configurar, execute o sistema e:
+# 1. Registre um empréstimo com e-mail válido
+# 2. Verifique se recebeu o e-mail de confirmação
+# 3. Os lembretes serão enviados diariamente às 09:00
+# 4. Configure a data de devolução para próxima para testar lembretes

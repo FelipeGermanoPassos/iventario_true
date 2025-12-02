@@ -1024,6 +1024,14 @@ def adicionar_emprestimo():
         db.session.add(emprestimo)
         db.session.commit()
         
+        # Envia e-mail de confirmação
+        from app.email_service import enviar_email_confirmacao_emprestimo
+        try:
+            enviar_email_confirmacao_emprestimo(current_app._get_current_object(), emprestimo)
+        except Exception as e:
+            # Não falha a operação se o email não for enviado
+            current_app.logger.warning(f'Falha ao enviar e-mail de confirmação: {str(e)}')
+        
         return jsonify({
             'success': True,
             'message': 'Empréstimo registrado com sucesso!',
@@ -1060,6 +1068,14 @@ def devolver_emprestimo(id):
             equipamento.status = 'Estoque'
         
         db.session.commit()
+        
+        # Envia e-mail de confirmação de devolução
+        from app.email_service import enviar_email_confirmacao_devolucao
+        try:
+            enviar_email_confirmacao_devolucao(current_app._get_current_object(), emprestimo)
+        except Exception as e:
+            # Não falha a operação se o email não for enviado
+            current_app.logger.warning(f'Falha ao enviar e-mail de devolução: {str(e)}')
         
         return jsonify({
             'success': True,
@@ -1484,4 +1500,92 @@ def exportar_relatorio_pdf():
         return jsonify({
             'success': False,
             'message': f'Erro ao gerar PDF: {str(e)}'
+        }), 400
+
+# ====== ROTA DE TESTE DE E-MAIL ======
+
+@main.route('/admin/testar-email', methods=['POST'])
+@login_required
+@admin_required
+def testar_email():
+    """Envia um e-mail de teste para verificar configuração"""
+    try:
+        data = request.json
+        email_destino = data.get('email')
+        
+        if not email_destino:
+            return jsonify({
+                'success': False,
+                'message': 'E-mail de destino não fornecido'
+            }), 400
+        
+        if not current_app.config.get('MAIL_ENABLED'):
+            return jsonify({
+                'success': False,
+                'message': 'Sistema de e-mail está desabilitado. Configure MAIL_ENABLED=true'
+            }), 400
+        
+        from flask_mail import Mail, Message
+        mail = Mail(current_app)
+        
+        msg = Message(
+            subject='🧪 Teste de E-mail - Sistema de Inventário',
+            recipients=[email_destino],
+            html='''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #EF7D2D 0%, #D96B1F 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+        .success { background: #d1fae5; border: 2px solid #10b981; padding: 15px; border-radius: 4px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>🧪 Teste de E-mail</h2>
+        </div>
+        <div class="content">
+            <div class="success">
+                <h3>✅ Configuração de E-mail Funcionando!</h3>
+            </div>
+            
+            <p>Se você está lendo este e-mail, significa que o sistema de notificações por e-mail está configurado corretamente.</p>
+            
+            <p><strong>Recursos habilitados:</strong></p>
+            <ul>
+                <li>✅ Confirmação de empréstimos</li>
+                <li>✅ Confirmação de devoluções</li>
+                <li>✅ Lembretes de devolução próxima (3 dias antes)</li>
+                <li>✅ Alertas de empréstimos atrasados</li>
+            </ul>
+            
+            <p><strong>Horário das verificações:</strong> Diariamente às 09:00</p>
+            
+            <p style="text-align: center; color: #666; font-size: 12px; margin-top: 30px;">
+                Sistema de Inventário de Equipamentos TI - TrueSource
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+            '''
+        )
+        
+        mail.send(msg)
+        
+        return jsonify({
+            'success': True,
+            'message': f'E-mail de teste enviado com sucesso para {email_destino}'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f'Erro ao enviar e-mail de teste: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao enviar e-mail: {str(e)}'
         }), 400

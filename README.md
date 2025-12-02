@@ -90,7 +90,56 @@ python run.py
 
 Abra seu navegador em: **http://localhost:5000**
 
-### 5. Instalar no Android (PWA)
+### 5. Configurar notificações por e-mail (Opcional)
+
+O sistema pode enviar e-mails automáticos para notificar responsáveis sobre:
+- ✅ Confirmação de empréstimos
+- ✅ Confirmação de devoluções  
+- ⏰ Lembretes 3 dias antes da devolução
+- 🚨 Alertas de empréstimos atrasados
+
+**Para habilitar:**
+
+1) Configure as variáveis de ambiente antes de executar o sistema
+
+**Windows PowerShell:**
+```powershell
+$env:MAIL_ENABLED="true"
+$env:MAIL_SERVER="smtp.gmail.com"
+$env:MAIL_PORT="587"
+$env:MAIL_USE_TLS="true"
+$env:MAIL_USERNAME="seu-email@gmail.com"
+$env:MAIL_PASSWORD="sua-senha-de-app"
+python run.py
+```
+
+**Linux/Mac:**
+```bash
+export MAIL_ENABLED=true
+export MAIL_SERVER=smtp.gmail.com
+export MAIL_PORT=587
+export MAIL_USE_TLS=true
+export MAIL_USERNAME=seu-email@gmail.com
+export MAIL_PASSWORD=sua-senha-de-app
+python run.py
+```
+
+2) **IMPORTANTE para Gmail:** Use uma "Senha de App" e não sua senha normal
+   - Acesse: https://myaccount.google.com/security
+   - Ative a verificação em duas etapas
+   - Vá em "Senhas de app" e gere uma nova senha
+   - Use essa senha na variável `MAIL_PASSWORD`
+
+3) **Testar configuração:**
+   - Acesse o painel admin
+   - Use a funcionalidade de teste de e-mail
+   - Verifique se recebeu o e-mail de teste
+
+4) **Verificação automática:** Os lembretes são enviados diariamente às 09:00
+
+Consulte o arquivo `email_config_example.txt` para mais detalhes.
+
+### 6. Instalar no Android (PWA)
 
 Para instalar o sistema como aplicativo no Android (PWA), é necessário acessar via HTTPS no celular.
 
@@ -408,8 +457,8 @@ O sistema é totalmente responsivo e funciona em:
 ## 💡 Sugestões para Evolução Futura
 
 ### 🔔 Notificações e Comunicação
-- [ ] **Envio de e-mails automáticos**: Notificar responsáveis sobre devoluções próximas e atrasadas
-- [ ] **Sistema de lembretes**: Alertas personalizados para usuários (3 dias antes, 1 dia antes, no vencimento)
+- [x] **Envio de e-mails automáticos**: Notificar responsáveis sobre devoluções próximas e atrasadas ✅
+- [x] **Sistema de lembretes**: Alertas personalizados para usuários (3 dias antes, devoluções atrasadas) ✅
 - [ ] **Notificações push no PWA**: Alertas instantâneos no app mobile
 - [ ] **WhatsApp/SMS**: Integração para envio de lembretes via WhatsApp Business API
 
