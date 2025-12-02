@@ -1528,11 +1528,32 @@ def dashboard_executivo_dados():
         valor_total_inventario = sum([eq.valor or 0 for eq in equipamentos])
         valor_medio_equipamento = valor_total_inventario / total_equipamentos if total_equipamentos > 0 else 0
         
-        # Equipamentos por departamento
+        # Equipamentos por departamento (baseado no empréstimo ativo ou último empréstimo)
         equipamentos_por_dept = {}
         valor_por_dept = {}
         for eq in equipamentos:
-            dept = eq.departamento_atual or 'Não Atribuído'
+            # Busca o departamento do empréstimo ativo ou do último empréstimo
+            dept = None
+            emprestimo_ativo = Emprestimo.query.filter_by(
+                equipamento_id=eq.id,
+                status='Ativo'
+            ).first()
+            
+            if emprestimo_ativo:
+                dept = emprestimo_ativo.departamento
+            else:
+                # Se não tem empréstimo ativo, busca o último empréstimo
+                ultimo_emprestimo = Emprestimo.query.filter_by(
+                    equipamento_id=eq.id
+                ).order_by(Emprestimo.data_emprestimo.desc()).first()
+                
+                if ultimo_emprestimo:
+                    dept = ultimo_emprestimo.departamento
+                else:
+                    # Fallback: usa o departamento_atual do equipamento
+                    dept = eq.departamento_atual
+            
+            dept = dept or 'Não Atribuído'
             equipamentos_por_dept[dept] = equipamentos_por_dept.get(dept, 0) + 1
             valor_por_dept[dept] = valor_por_dept.get(dept, 0) + (eq.valor or 0)
         
