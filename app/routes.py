@@ -1502,7 +1502,19 @@ def exportar_relatorio_pdf():
             'message': f'Erro ao gerar PDF: {str(e)}'
         }), 400
 
-# ====== ROTA DE TESTE DE E-MAIL ======
+# ====== ROTAS DE E-MAIL ======
+
+@main.route('/admin/email-status', methods=['GET'])
+@login_required
+@admin_required
+def email_status():
+    """Retorna o status da configuração de e-mail"""
+    return jsonify({
+        'enabled': current_app.config.get('MAIL_ENABLED', False),
+        'server': current_app.config.get('MAIL_SERVER', ''),
+        'port': current_app.config.get('MAIL_PORT', ''),
+        'sender': current_app.config.get('MAIL_DEFAULT_SENDER', '')
+    })
 
 @main.route('/admin/testar-email', methods=['POST'])
 @login_required

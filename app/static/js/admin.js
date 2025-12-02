@@ -24,6 +24,9 @@ function mostrarTab(nomeTab) {
     } else if (nomeTab === 'backups') {
         document.getElementById('tabBackups').classList.add('active');
         carregarBackups();
+    } else if (nomeTab === 'email') {
+        document.getElementById('tabEmail').classList.add('active');
+        carregarStatusEmail();
     }
 }
 
@@ -80,6 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAtualizarBackups = document.getElementById('btnAtualizarBackups');
     if (btnAtualizarBackups) {
         btnAtualizarBackups.addEventListener('click', carregarBackups);
+    }
+    
+    const btnTestarEmail = document.getElementById('btnTestarEmail');
+    if (btnTestarEmail) {
+        btnTestarEmail.addEventListener('click', testarEmail);
     }
     
     console.log('DOMContentLoaded - concluído');
@@ -543,5 +551,82 @@ async function deletarBackup(nome) {
     } catch (error) {
         console.error('Erro ao deletar backup:', error);
         mostrarMensagem('Erro ao deletar backup', 'error');
+    }
+}
+
+// ====== FUNÇÕES DE E-MAIL ======
+
+async function carregarStatusEmail() {
+    try {
+        const response = await fetch('/admin/email-status');
+        const data = await response.json();
+        
+        const statusText = document.getElementById('emailStatusText');
+        const server = document.getElementById('emailServer');
+        const port = document.getElementById('emailPort');
+        const sender = document.getElementById('emailSender');
+        
+        if (data.enabled) {
+            statusText.textContent = '✅ Habilitado';
+            statusText.className = 'enabled';
+            server.textContent = data.server || '-';
+            port.textContent = data.port || '-';
+            sender.textContent = data.sender || '-';
+        } else {
+            statusText.textContent = '❌ Desabilitado';
+            statusText.className = 'disabled';
+            server.textContent = '-';
+            port.textContent = '-';
+            sender.textContent = '-';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar status de e-mail:', error);
+        document.getElementById('emailStatusText').textContent = '❓ Erro ao verificar';
+    }
+}
+
+async function testarEmail() {
+    const emailInput = document.getElementById('emailTeste');
+    const email = emailInput.value.trim();
+    
+    if (!email) {
+        mostrarMensagem('Por favor, informe um e-mail de destino', 'error');
+        return;
+    }
+    
+    // Validação básica de e-mail
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        mostrarMensagem('Por favor, informe um e-mail válido', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('btnTestarEmail');
+    btn.disabled = true;
+    btn.textContent = '📧 Enviando...';
+    
+    try {
+        const response = await fetch('/admin/testar-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarMensagem(data.message, 'success');
+            emailInput.value = ''; // Limpa o campo
+        } else {
+            mostrarMensagem(data.message || 'Erro ao enviar e-mail de teste', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao testar e-mail:', error);
+        mostrarMensagem('Erro ao testar e-mail. Verifique as configurações.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '📧 Enviar E-mail de Teste';
     }
 }

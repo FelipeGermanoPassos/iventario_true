@@ -58,6 +58,7 @@
             <div class="tabs">
                 <button class="tab-button active" onclick="mostrarTab('usuarios')">👥 Usuários</button>
                 <button class="tab-button" onclick="mostrarTab('backups')">💾 Backups</button>
+                <button class="tab-button" onclick="mostrarTab('email')">📧 E-mail</button>
             </div>
 
             <!-- Tab Usuários -->
@@ -136,6 +137,75 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab E-mail -->
+            <div id="tabEmail" class="tab-content">
+                <section class="email-section">
+                    <div class="section-header">
+                        <h2>📧 Configuração de E-mail</h2>
+                    </div>
+
+                    <div class="email-config-container">
+                        <div class="info-box">
+                            <h3>📋 Status do Sistema de E-mail</h3>
+                            <p id="emailStatus"><strong>Status:</strong> <span id="emailStatusText">Verificando...</span></p>
+                            <p><strong>Servidor:</strong> <span id="emailServer">-</span></p>
+                            <p><strong>Porta:</strong> <span id="emailPort">-</span></p>
+                            <p><strong>Remetente:</strong> <span id="emailSender">-</span></p>
+                        </div>
+
+                        <div class="email-test-box">
+                            <h3>🧪 Testar Envio de E-mail</h3>
+                            <p>Envie um e-mail de teste para verificar se a configuração está funcionando:</p>
+                            
+                            <div class="form-group">
+                                <label for="emailTeste">E-mail de Destino:</label>
+                                <input type="email" id="emailTeste" placeholder="seu-email@exemplo.com" class="form-control">
+                            </div>
+                            
+                            <button id="btnTestarEmail" class="btn btn-primary">📧 Enviar E-mail de Teste</button>
+                        </div>
+
+                        <div class="email-info-box">
+                            <h3>ℹ️ Como Configurar</h3>
+                            <p>O sistema de e-mail é configurado através de variáveis de ambiente. Para habilitar:</p>
+                            
+                            <h4>Windows PowerShell:</h4>
+                            <pre><code>$env:MAIL_ENABLED="true"
+$env:MAIL_SERVER="smtp.gmail.com"
+$env:MAIL_PORT="587"
+$env:MAIL_USE_TLS="true"
+$env:MAIL_USERNAME="seu-email@gmail.com"
+$env:MAIL_PASSWORD="sua-senha-de-app"
+python run.py</code></pre>
+
+                            <h4>Linux/Mac:</h4>
+                            <pre><code>export MAIL_ENABLED=true
+export MAIL_SERVER=smtp.gmail.com
+export MAIL_PORT=587
+export MAIL_USE_TLS=true
+export MAIL_USERNAME=seu-email@gmail.com
+export MAIL_PASSWORD=sua-senha-de-app
+python run.py</code></pre>
+
+                            <p><strong>⚠️ Importante para Gmail:</strong> Use uma "Senha de App" e não sua senha normal.</p>
+                            <p>Acesse <a href="https://myaccount.google.com/security" target="_blank">https://myaccount.google.com/security</a> e gere uma senha de app.</p>
+                            
+                            <h4>📧 Notificações Automáticas:</h4>
+                            <ul>
+                                <li>✅ Confirmação de empréstimos</li>
+                                <li>✅ Confirmação de devoluções</li>
+                                <li>⏰ Lembretes 3 dias antes da devolução</li>
+                                <li>🚨 Alertas de empréstimos atrasados</li>
+                            </ul>
+                            
+                            <p><strong>⏰ Verificação:</strong> Diariamente às 09:00</p>
+                            
+                            <p>Consulte o arquivo <code>email_config_example.txt</code> para mais detalhes.</p>
+                        </div>
                     </div>
                 </section>
             </div>
