@@ -13,7 +13,19 @@ def create_app():
     # Permite substituir o banco via variável de ambiente (necessário para Vercel/Postgres)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI') or 'sqlite:///inventario.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    # Configurações otimizadas para serverless (Vercel)
     is_vercel = bool(os.environ.get('VERCEL'))
+    if is_vercel:
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'pool_size': 1,
+            'max_overflow': 0,
+            'pool_pre_ping': True,
+            'pool_recycle': 300,
+            'connect_args': {
+                'connect_timeout': 10,
+            }
+        }
     
     # Configurações de E-mail
     # Carrega do arquivo .env se existir, senão usa variáveis de ambiente
@@ -72,9 +84,15 @@ def create_app():
     def load_user(user_id):
         return Usuario.query.get(int(user_id))
     
-    # Cria as tabelas se não existirem
+    # Cria as tabelas se não existirem (com tratamento de erro para evitar crash no Vercel)
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            # Em produção serverless, as tabelas devem ser criadas via SQL script
+            # Logando o erro mas não quebrando a aplicação
+            app.logger.warning(f'Não foi possível criar tabelas automaticamente: {str(e)}')
+            app.logger.info('Se as tabelas não existem, execute o script supabase_init.sql no painel do Supabase')
     
     # Registra as rotas
     from app.routes import main

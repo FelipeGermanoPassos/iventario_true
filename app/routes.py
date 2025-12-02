@@ -19,6 +19,17 @@ import base64
 
 main = Blueprint('main', __name__)
 
+# ==================== HEALTH CHECK ====================
+
+@main.route('/health')
+def health():
+    """Rota de health check simples para testar se o app está rodando"""
+    return jsonify({
+        'status': 'ok',
+        'timestamp': datetime.utcnow().isoformat(),
+        'message': 'API is running'
+    })
+
 # Decorator para verificar se usuário é admin
 def admin_required(f):
     @wraps(f)
