@@ -1958,7 +1958,7 @@ def whatsapp_status():
             'success': True,
             'enabled': enabled,
             'provider': provider,
-            'credentials_configured': credentials_ok
+            'configured': credentials_ok
         })
         
     except Exception as e:
@@ -1967,3 +1967,67 @@ def whatsapp_status():
             'success': False,
             'message': f'Erro ao verificar status: {str(e)}'
         }), 400
+
+@main.route('/admin/whatsapp-configuracao')
+@admin_required
+def whatsapp_configuracao():
+    """Página de configuração do WhatsApp"""
+    return render_template('whatsapp_config.html')
+
+@main.route('/admin/whatsapp-config', methods=['GET', 'POST'])
+@admin_required
+def whatsapp_config():
+    """Gerencia configurações do WhatsApp"""
+    from app.config_manager import ConfigManager
+    
+    if request.method == 'GET':
+        # Retorna configurações atuais
+        config = ConfigManager.get_config()
+        
+        # Filtra apenas as configurações do WhatsApp
+        whatsapp_config = {
+            'WHATSAPP_ENABLED': config.get('WHATSAPP_ENABLED', 'false'),
+            'WHATSAPP_PROVIDER': config.get('WHATSAPP_PROVIDER', ''),
+            'TWILIO_ACCOUNT_SID': config.get('TWILIO_ACCOUNT_SID', ''),
+            'TWILIO_AUTH_TOKEN': config.get('TWILIO_AUTH_TOKEN', ''),
+            'TWILIO_WHATSAPP_NUMBER': config.get('TWILIO_WHATSAPP_NUMBER', ''),
+            'MESSAGEBIRD_API_KEY': config.get('MESSAGEBIRD_API_KEY', ''),
+            'MESSAGEBIRD_CHANNEL_ID': config.get('MESSAGEBIRD_CHANNEL_ID', ''),
+            'META_ACCESS_TOKEN': config.get('META_ACCESS_TOKEN', ''),
+            'META_PHONE_NUMBER_ID': config.get('META_PHONE_NUMBER_ID', '')
+        }
+        
+        return jsonify(whatsapp_config)
+    
+    elif request.method == 'POST':
+        # Salva novas configurações
+        try:
+            new_config = request.get_json()
+            
+            # Valida dados
+            if not new_config:
+                return jsonify({
+                    'success': False,
+                    'message': 'Dados de configuração não fornecidos'
+                }), 400
+            
+            # Salva configurações
+            success = ConfigManager.save_config(new_config)
+            
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Configurações salvas com sucesso'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Erro ao salvar configurações'
+                }), 500
+                
+        except Exception as e:
+            current_app.logger.error(f'Erro ao salvar configurações: {str(e)}')
+            return jsonify({
+                'success': False,
+                'message': f'Erro ao salvar: {str(e)}'
+            }), 500

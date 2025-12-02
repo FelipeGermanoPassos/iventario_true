@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuração de WhatsApp - Sistema de Inventário</title>
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#EF7D2D">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <style>
+        .whatsapp-config-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .config-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .config-card h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-section {
+            margin-bottom: 25px;
+        }
+        
+        .form-section h3 {
+            color: #374151;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+        
+        .form-grid-2col {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .form-field {
+            margin-bottom: 15px;
+        }
+        
+        .form-field label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .form-field input,
+        .form-field select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-field input:focus,
+        .form-field select:focus {
+            outline: none;
+            border-color: #25D366;
+        }
+        
+        .form-field small {
+            display: block;
+            margin-top: 5px;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .checkbox-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .checkbox-field input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .checkbox-field label {
+            margin: 0;
+            cursor: pointer;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .btn-large {
+            padding: 14px 28px;
+            font-size: 1.05rem;
+        }
+        
+        .info-banner {
+            background: #dcfce7;
+            border-left: 4px solid #25D366;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .info-banner h4 {
+            color: #166534;
+            margin-bottom: 10px;
+        }
+        
+        .info-banner ul {
+            margin-left: 20px;
+            color: #15803d;
+        }
+        
+        .warning-banner {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .warning-banner h4 {
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .status-enabled {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-disabled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .password-toggle {
+            position: relative;
+        }
+        
+        .password-toggle-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #6b7280;
+        }
+        
+        .provider-fields {
+            display: none;
+        }
+        
+        .provider-fields.active {
+            display: block;
+        }
+        
+        .cost-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .cost-table th,
+        .cost-table td {
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+        }
+        
+        .cost-table thead {
+            background: #f3f4f6;
+        }
+        
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-buttons .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💬 Configuração de WhatsApp</h1>
+            <div class="header-buttons">
+                <a href="{{ url_for('main.admin') }}" class="btn btn-secondary">← Voltar ao Admin</a>
+                <a href="{{ url_for('main.perfil') }}" class="user-name">👤 {{ current_user.nome }}</a>
+                <a href="{{ url_for('main.logout') }}" class="btn btn-logout">🚪 Sair</a>
+            </div>
+        </header>
+
+        <div class="whatsapp-config-page">
+            <!-- Status Atual -->
+            <div class="config-card">
+                <h2>📊 Status Atual</h2>
+                <div id="currentStatus">
+                    <p><strong>Sistema de WhatsApp:</strong> <span id="statusBadge" class="status-indicator status-disabled">❌ Desabilitado</span></p>
+                    <p id="configSummary" class="text-secondary">Carregando configurações...</p>
+                </div>
+            </div>
+
+            <!-- Formulário de Configuração -->
+            <div class="config-card">
+                <h2>⚙️ Configurações WhatsApp Business API</h2>
+                
+                <div class="info-banner">
+                    <h4>ℹ️ Informação</h4>
+                    <p>Configure um provedor de WhatsApp Business API para enviar notificações automáticas via WhatsApp.</p>
+                </div>
+
+                <form id="formWhatsAppConfig">
+                    <div class="checkbox-field">
+                        <input type="checkbox" id="whatsappEnabled" name="whatsappEnabled">
+                        <label for="whatsappEnabled"><strong>Habilitar envio via WhatsApp</strong></label>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Provedor</h3>
+                        <div class="form-field">
+                            <label for="whatsappProvider">Selecione o Provedor *</label>
+                            <select id="whatsappProvider" name="whatsappProvider" required>
+                                <option value="">Selecione um provedor...</option>
+                                <option value="twilio">Twilio (Recomendado para iniciantes)</option>
+                                <option value="messagebird">MessageBird</option>
+                                <option value="meta">Meta / Facebook</option>
+                            </select>
+                            <small>Cada provedor tem suas próprias vantagens e custos</small>
+                        </div>
+
+                        <!-- Tabela de Comparação -->
+                        <table class="cost-table">
+                            <thead>
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Custo por Mensagem</th>
+                                    <th>Facilidade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Twilio</td>
+                                    <td>~$0.005 - $0.01</td>
+                                    <td>⭐⭐⭐⭐⭐ Muito Fácil</td>
+                                </tr>
+                                <tr>
+                                    <td>MessageBird</td>
+                                    <td>~$0.004 - $0.008</td>
+                                    <td>⭐⭐⭐⭐ Fácil</td>
+                                </tr>
+                                <tr>
+                                    <td>Meta</td>
+                                    <td>Grátis (1000/mês)</td>
+                                    <td>⭐⭐⭐ Moderado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Campos do Twilio -->
+                    <div id="twilioFields" class="provider-fields form-section">
+                        <h3>Credenciais do Twilio</h3>
+                        
+                        <div class="warning-banner">
+                            <h4>📚 Como configurar Twilio</h4>
+                            <ol style="margin-left: 20px; color: #92400e;">
+                                <li>Acesse <a href="https://www.twilio.com/console" target="_blank" rel="noopener">console.twilio.com</a></li>
+                                <li>Copie seu Account SID e Auth Token</li>
+                                <li>Configure um número WhatsApp (WhatsApp Sandbox para testes)</li>
+                            </ol>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="twilioAccountSid">Account SID *</label>
+                            <input type="text" id="twilioAccountSid" name="twilioAccountSid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                        </div>
+
+                        <div class="form-field">
+                            <label for="twilioAuthToken">Auth Token *</label>
+                            <div class="password-toggle">
+                                <input type="password" id="twilioAuthToken" name="twilioAuthToken" placeholder="••••••••••••••••••••••••••••••••">
+                                <button type="button" class="password-toggle-btn" onclick="togglePassword('twilioAuthToken')">👁️</button>
+                            </div>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="twilioWhatsappNumber">Número WhatsApp *</label>
+                            <input type="tel" id="twilioWhatsappNumber" name="twilioWhatsappNumber" placeholder="+14155238886">
+                            <small>Para testes use: whatsapp:+14155238886</small>
+                        </div>
+                    </div>
+
+                    <!-- Campos do MessageBird -->
+                    <div id="messagebirdFields" class="provider-fields form-section">
+                        <h3>Credenciais do MessageBird</h3>
+                        
+                        <div class="warning-banner">
+                            <h4>📚 Como configurar MessageBird</h4>
+                            <ol style="margin-left: 20px; color: #92400e;">
+                                <li>Acesse <a href="https://dashboard.messagebird.com" target="_blank" rel="noopener">dashboard.messagebird.com</a></li>
+                                <li>Vá em Developers > API access keys</li>
+                                <li>Copie sua Live API key</li>
+                                <li>Configure um canal WhatsApp Business</li>
+                            </ol>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="messagebirdApiKey">API Key *</label>
+                            <div class="password-toggle">
+                                <input type="password" id="messagebirdApiKey" name="messagebirdApiKey" placeholder="••••••••••••••••••••••••">
+                                <button type="button" class="password-toggle-btn" onclick="togglePassword('messagebirdApiKey')">👁️</button>
+                            </div>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="messagebirdChannelId">Channel ID *</label>
+                            <input type="text" id="messagebirdChannelId" name="messagebirdChannelId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                            <small>ID do canal WhatsApp Business configurado</small>
+                        </div>
+                    </div>
+
+                    <!-- Campos do Meta -->
+                    <div id="metaFields" class="provider-fields form-section">
+                        <h3>Credenciais do Meta / Facebook</h3>
+                        
+                        <div class="warning-banner">
+                            <h4>📚 Como configurar Meta WhatsApp Business API</h4>
+                            <ol style="margin-left: 20px; color: #92400e;">
+                                <li>Acesse <a href="https://developers.facebook.com" target="_blank" rel="noopener">developers.facebook.com</a></li>
+                                <li>Crie um app com WhatsApp Business API</li>
+                                <li>Copie o Access Token permanente</li>
+                                <li>Copie o Phone Number ID</li>
+                            </ol>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="metaAccessToken">Access Token *</label>
+                            <div class="password-toggle">
+                                <input type="password" id="metaAccessToken" name="metaAccessToken" placeholder="••••••••••••••••••••••••••••••••">
+                                <button type="button" class="password-toggle-btn" onclick="togglePassword('metaAccessToken')">👁️</button>
+                            </div>
+                            <small>Token de acesso permanente do WhatsApp Business</small>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="metaPhoneNumberId">Phone Number ID *</label>
+                            <input type="text" id="metaPhoneNumberId" name="metaPhoneNumberId" placeholder="123456789012345">
+                            <small>ID do número de telefone configurado</small>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary btn-large">💾 Salvar Configurações</button>
+                        <button type="button" class="btn btn-success btn-large" onclick="testarConfiguracao()">🧪 Testar WhatsApp</button>
+                        <button type="button" class="btn btn-secondary" onclick="carregarConfiguracoes()">🔄 Recarregar</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Informações Adicionais -->
+            <div class="config-card">
+                <h2>📋 Recursos de Notificação</h2>
+                <p>Com o sistema de WhatsApp habilitado, os seguintes recursos estarão disponíveis:</p>
+                <ul style="margin-left: 20px; margin-top: 15px; color: #4a5568;">
+                    <li>✅ Confirmação automática ao registrar empréstimos</li>
+                    <li>✅ Confirmação automática ao devolver equipamentos</li>
+                    <li>⏰ Lembretes 3 dias antes da devolução prevista</li>
+                    <li>🚨 Alertas automáticos de empréstimos atrasados</li>
+                </ul>
+                <p style="margin-top: 15px; color: #6b7280;"><strong>Verificação:</strong> Diariamente às 09:00 (junto com e-mails)</p>
+            </div>
+        </div>
+
+        <!-- Mensagens de feedback -->
+        <div id="mensagem" class="message-admin"></div>
+    </div>
+
+    <script>
+        // Carrega configurações ao iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarConfiguracoes();
+            
+            // Event listener para mudança de provedor
+            document.getElementById('whatsappProvider').addEventListener('change', (e) => {
+                // Esconde todos os campos
+                document.querySelectorAll('.provider-fields').forEach(field => {
+                    field.classList.remove('active');
+                });
+                
+                // Mostra campos do provedor selecionado
+                const provider = e.target.value;
+                if (provider) {
+                    const fieldsId = provider + 'Fields';
+                    const fieldsElement = document.getElementById(fieldsId);
+                    if (fieldsElement) {
+                        fieldsElement.classList.add('active');
+                    }
+                }
+            });
+            
+            // Submit do formulário
+            document.getElementById('formWhatsAppConfig').addEventListener('submit', salvarConfiguracoes);
+        });
+
+        async function carregarConfiguracoes() {
+            try {
+                const response = await fetch('/admin/whatsapp-config');
+                const config = await response.json();
+                
+                // Atualiza status
+                const statusBadge = document.getElementById('statusBadge');
+                const configSummary = document.getElementById('configSummary');
+                
+                if (config.WHATSAPP_ENABLED === 'true') {
+                    statusBadge.textContent = '✅ Habilitado';
+                    statusBadge.className = 'status-indicator status-enabled';
+                    const providerName = {
+                        'twilio': 'Twilio',
+                        'messagebird': 'MessageBird',
+                        'meta': 'Meta/Facebook'
+                    }[config.WHATSAPP_PROVIDER] || config.WHATSAPP_PROVIDER;
+                    configSummary.innerHTML = `Provedor: <strong>${providerName}</strong> | Status: <strong>Configurado</strong>`;
+                } else {
+                    statusBadge.textContent = '❌ Desabilitado';
+                    statusBadge.className = 'status-indicator status-disabled';
+                    configSummary.textContent = 'Configure um provedor WhatsApp Business API abaixo.';
+                }
+                
+                // Preenche formulário
+                document.getElementById('whatsappEnabled').checked = config.WHATSAPP_ENABLED === 'true';
+                
+                const provider = config.WHATSAPP_PROVIDER;
+                if (provider) {
+                    document.getElementById('whatsappProvider').value = provider;
+                    
+                    // Mostra campos do provedor
+                    const fieldsId = provider + 'Fields';
+                    const fieldsElement = document.getElementById(fieldsId);
+                    if (fieldsElement) {
+                        fieldsElement.classList.add('active');
+                    }
+                    
+                    // Preenche credenciais específicas
+                    if (provider === 'twilio') {
+                        document.getElementById('twilioAccountSid').value = config.TWILIO_ACCOUNT_SID || '';
+                        document.getElementById('twilioAuthToken').value = config.TWILIO_AUTH_TOKEN || '';
+                        document.getElementById('twilioWhatsappNumber').value = config.TWILIO_WHATSAPP_NUMBER || '';
+                    } else if (provider === 'messagebird') {
+                        document.getElementById('messagebirdApiKey').value = config.MESSAGEBIRD_API_KEY || '';
+                        document.getElementById('messagebirdChannelId').value = config.MESSAGEBIRD_CHANNEL_ID || '';
+                    } else if (provider === 'meta') {
+                        document.getElementById('metaAccessToken').value = config.META_ACCESS_TOKEN || '';
+                        document.getElementById('metaPhoneNumberId').value = config.META_PHONE_NUMBER_ID || '';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar configurações:', error);
+                mostrarMensagem('Erro ao carregar configurações', 'error');
+            }
+        }
+
+        async function salvarConfiguracoes(event) {
+            event.preventDefault();
+            
+            const provider = document.getElementById('whatsappProvider').value;
+            
+            if (!provider && document.getElementById('whatsappEnabled').checked) {
+                mostrarMensagem('Por favor, selecione um provedor', 'error');
+                return;
+            }
+            
+            const config = {
+                WHATSAPP_ENABLED: document.getElementById('whatsappEnabled').checked ? 'true' : 'false',
+                WHATSAPP_PROVIDER: provider
+            };
+            
+            // Adiciona credenciais específicas do provedor
+            if (provider === 'twilio') {
+                config.TWILIO_ACCOUNT_SID = document.getElementById('twilioAccountSid').value;
+                config.TWILIO_AUTH_TOKEN = document.getElementById('twilioAuthToken').value;
+                config.TWILIO_WHATSAPP_NUMBER = document.getElementById('twilioWhatsappNumber').value;
+            } else if (provider === 'messagebird') {
+                config.MESSAGEBIRD_API_KEY = document.getElementById('messagebirdApiKey').value;
+                config.MESSAGEBIRD_CHANNEL_ID = document.getElementById('messagebirdChannelId').value;
+            } else if (provider === 'meta') {
+                config.META_ACCESS_TOKEN = document.getElementById('metaAccessToken').value;
+                config.META_PHONE_NUMBER_ID = document.getElementById('metaPhoneNumberId').value;
+            }
+            
+            try {
+                const response = await fetch('/admin/whatsapp-config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    mostrarMensagem('✅ Configurações salvas com sucesso! As mudanças entrarão em vigor na próxima reinicialização do servidor.', 'success');
+                    setTimeout(() => {
+                        carregarConfiguracoes();
+                    }, 1000);
+                } else {
+                    mostrarMensagem(data.message || 'Erro ao salvar configurações', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao salvar configurações:', error);
+                mostrarMensagem('Erro ao salvar configurações', 'error');
+            }
+        }
+
+        async function testarConfiguracao() {
+            const telefone = prompt('Digite o número de telefone para teste (com DDD):\nExemplo: (11) 98765-4321 ou 11987654321');
+            
+            if (!telefone) return;
+            
+            try {
+                const response = await fetch('/whatsapp/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phone: telefone })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    mostrarMensagem(`✅ ${data.message}`, 'success');
+                } else {
+                    mostrarMensagem(`❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao testar WhatsApp:', error);
+                mostrarMensagem('Erro ao enviar mensagem de teste. Verifique as configurações.', 'error');
+            }
+        }
+
+        function togglePassword(fieldId) {
+            const passwordInput = document.getElementById(fieldId);
+            const btn = event.target;
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                btn.textContent = '👁️';
+            }
+        }
+
+        function mostrarMensagem(texto, tipo = 'info') {
+            const mensagemDiv = document.getElementById('mensagem');
+            mensagemDiv.textContent = texto;
+            mensagemDiv.className = `message-admin ${tipo} show`;
+            
+            setTimeout(() => {
+                mensagemDiv.className = 'message-admin';
+                mensagemDiv.textContent = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
