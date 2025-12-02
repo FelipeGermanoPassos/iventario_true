@@ -9,7 +9,3 @@ itsdangerous==2.1.2
 MarkupSafe==2.1.5
 blinker==1.7.0
 qrcode==7.4.2
-APScheduler==3.10.4
-python-dateutil==2.9.0
-tzlocal==5.2
-typing_extensions==4.9.0
