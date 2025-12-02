@@ -15,14 +15,32 @@ class WhatsAppService:
     """Serviço para envio de mensagens via WhatsApp Business API"""
     
     @staticmethod
+    def _get_config_value(key: str, default: str = '') -> str:
+        """
+        Obtém valor de configuração, verificando primeiro environment e depois config file
+        """
+        # Tenta pegar do environment primeiro
+        env_value = os.environ.get(key)
+        if env_value:
+            return env_value
+        
+        # Se não encontrou, tenta do config_manager
+        try:
+            from app.config_manager import ConfigManager
+            config = ConfigManager.get_config()
+            return config.get(key, default)
+        except:
+            return default
+    
+    @staticmethod
     def get_provider():
         """Retorna o provedor configurado: twilio, messagebird ou meta"""
-        return os.environ.get('WHATSAPP_PROVIDER', 'twilio').lower()
+        return WhatsAppService._get_config_value('WHATSAPP_PROVIDER', 'twilio').lower()
     
     @staticmethod
     def is_enabled():
         """Verifica se o WhatsApp está habilitado"""
-        return os.environ.get('WHATSAPP_ENABLED', 'false').lower() == 'true'
+        return WhatsAppService._get_config_value('WHATSAPP_ENABLED', 'false').lower() == 'true'
     
     @staticmethod
     def format_phone(phone: str) -> str:
@@ -46,9 +64,9 @@ class WhatsAppService:
     def send_message_twilio(to: str, message: str) -> bool:
         """Envia mensagem via Twilio WhatsApp API"""
         try:
-            account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
-            auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
-            from_number = os.environ.get('TWILIO_WHATSAPP_FROM')
+            account_sid = WhatsAppService._get_config_value('TWILIO_ACCOUNT_SID')
+            auth_token = WhatsAppService._get_config_value('TWILIO_AUTH_TOKEN')
+            from_number = WhatsAppService._get_config_value('TWILIO_WHATSAPP_NUMBER')
             
             if not all([account_sid, auth_token, from_number]):
                 logger.error('Credenciais Twilio não configuradas')
@@ -83,8 +101,8 @@ class WhatsAppService:
     def send_message_messagebird(to: str, message: str) -> bool:
         """Envia mensagem via MessageBird WhatsApp API"""
         try:
-            api_key = os.environ.get('MESSAGEBIRD_API_KEY')
-            channel_id = os.environ.get('MESSAGEBIRD_CHANNEL_ID')
+            api_key = WhatsAppService._get_config_value('MESSAGEBIRD_API_KEY')
+            channel_id = WhatsAppService._get_config_value('MESSAGEBIRD_CHANNEL_ID')
             
             if not all([api_key, channel_id]):
                 logger.error('Credenciais MessageBird não configuradas')
@@ -123,8 +141,8 @@ class WhatsAppService:
     def send_message_meta(to: str, message: str) -> bool:
         """Envia mensagem via Meta (Facebook) WhatsApp Business API"""
         try:
-            access_token = os.environ.get('META_WHATSAPP_TOKEN')
-            phone_number_id = os.environ.get('META_WHATSAPP_PHONE_ID')
+            access_token = WhatsAppService._get_config_value('META_ACCESS_TOKEN')
+            phone_number_id = WhatsAppService._get_config_value('META_PHONE_NUMBER_ID')
             
             if not all([access_token, phone_number_id]):
                 logger.error('Credenciais Meta WhatsApp não configuradas')

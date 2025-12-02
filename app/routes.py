@@ -1939,19 +1939,19 @@ def whatsapp_status():
         
         if provider == 'twilio':
             credentials_ok = bool(
-                os.environ.get('TWILIO_ACCOUNT_SID') and
-                os.environ.get('TWILIO_AUTH_TOKEN') and
-                os.environ.get('TWILIO_WHATSAPP_FROM')
+                WhatsAppService._get_config_value('TWILIO_ACCOUNT_SID') and
+                WhatsAppService._get_config_value('TWILIO_AUTH_TOKEN') and
+                WhatsAppService._get_config_value('TWILIO_WHATSAPP_NUMBER')
             )
         elif provider == 'messagebird':
             credentials_ok = bool(
-                os.environ.get('MESSAGEBIRD_API_KEY') and
-                os.environ.get('MESSAGEBIRD_CHANNEL_ID')
+                WhatsAppService._get_config_value('MESSAGEBIRD_API_KEY') and
+                WhatsAppService._get_config_value('MESSAGEBIRD_CHANNEL_ID')
             )
         elif provider == 'meta':
             credentials_ok = bool(
-                os.environ.get('META_WHATSAPP_TOKEN') and
-                os.environ.get('META_WHATSAPP_PHONE_ID')
+                WhatsAppService._get_config_value('META_ACCESS_TOKEN') and
+                WhatsAppService._get_config_value('META_PHONE_NUMBER_ID')
             )
         
         return jsonify({
