@@ -9,3 +9,4 @@ itsdangerous==2.1.2
 MarkupSafe==2.1.5
 blinker==1.7.0
 qrcode==7.4.2
+psycopg2-binary==2.9.9
