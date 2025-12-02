@@ -574,8 +574,8 @@
     }
 }
 
-/* Seção de E-mail */
-.email-section {
+/* Seção de E-mail e WhatsApp */
+.email-section, .whatsapp-section {
     padding: 20px;
 }
 
@@ -590,6 +590,24 @@
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Tabela de comparação de providers */
+.email-info-box table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+.email-info-box table thead tr {
+    background: #f3f4f6;
+}
+
+.email-info-box table th,
+.email-info-box table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
 }
 
 .info-box h3, .email-test-box h3, .email-info-box h3 {

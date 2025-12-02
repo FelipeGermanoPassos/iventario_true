@@ -29,6 +29,9 @@ function mostrarTab(nomeTab, event) {
     } else if (nomeTab === 'email') {
         document.getElementById('tabEmail').classList.add('active');
         carregarStatusEmail();
+    } else if (nomeTab === 'whatsapp') {
+        document.getElementById('tabWhatsApp').classList.add('active');
+        carregarStatusWhatsApp();
     }
 }
 
@@ -654,3 +657,82 @@ async function testarEmail() {
         btn.textContent = '📧 Enviar E-mail de Teste';
     }
 }
+
+// ===== WHATSAPP =====
+async function carregarStatusWhatsApp() {
+    try {
+        const response = await fetch('/admin/whatsapp/status');
+        const data = await response.json();
+        
+        const statusText = document.getElementById('whatsappStatusText');
+        const provider = document.getElementById('whatsappProvider');
+        const configured = document.getElementById('whatsappConfigured');
+        
+        if (data.enabled) {
+            statusText.textContent = '✅ Habilitado';
+            statusText.style.color = '#10b981';
+        } else {
+            statusText.textContent = '❌ Desabilitado';
+            statusText.style.color = '#ef4444';
+        }
+        
+        provider.textContent = data.provider || 'Não configurado';
+        
+        if (data.configured) {
+            configured.textContent = '✅ Sim';
+            configured.style.color = '#10b981';
+        } else {
+            configured.textContent = '❌ Não';
+            configured.style.color = '#ef4444';
+        }
+        
+    } catch (error) {
+        console.error('Erro ao carregar status do WhatsApp:', error);
+        document.getElementById('whatsappStatusText').textContent = 'Erro ao verificar';
+    }
+}
+
+async function testarWhatsApp() {
+    const btn = document.getElementById('btnTestarWhatsApp');
+    const telefone = document.getElementById('whatsappTelefone').value.trim();
+    
+    if (!telefone) {
+        mostrarMensagem('Por favor, digite um número de telefone.', 'error');
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = '📤 Enviando...';
+    
+    try {
+        const response = await fetch('/whatsapp/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ phone: telefone })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            mostrarMensagem('✅ Mensagem de teste enviada com sucesso!', 'success');
+        } else {
+            mostrarMensagem(`❌ ${data.message || 'Erro ao enviar mensagem'}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao testar WhatsApp:', error);
+        mostrarMensagem('Erro ao testar WhatsApp. Verifique as configurações.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💬 Enviar Mensagem de Teste';
+    }
+}
+
+// Event listener para WhatsApp
+document.addEventListener('DOMContentLoaded', () => {
+    const btnTestarWhatsApp = document.getElementById('btnTestarWhatsApp');
+    if (btnTestarWhatsApp) {
+        btnTestarWhatsApp.addEventListener('click', testarWhatsApp);
+    }
+});

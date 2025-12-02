@@ -59,6 +59,7 @@
                 <button class="tab-button active" onclick="mostrarTab('usuarios', event)">👥 Usuários</button>
                 <button class="tab-button" onclick="mostrarTab('backups', event)">💾 Backups</button>
                 <button class="tab-button" onclick="mostrarTab('email', event)">📧 E-mail</button>
+                <button class="tab-button" onclick="mostrarTab('whatsapp', event)">💬 WhatsApp</button>
             </div>
 
             <!-- Tab Usuários -->
@@ -212,6 +213,113 @@ python run.py</code></pre>
                             <p><strong>⏰ Verificação:</strong> Diariamente às 09:00</p>
                             
                             <p>Consulte o arquivo <code>email_config_example.txt</code> para mais detalhes.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab WhatsApp -->
+            <div id="tabWhatsApp" class="tab-content">
+                <section class="whatsapp-section">
+                    <div class="section-header">
+                        <h2>💬 Configuração do WhatsApp</h2>
+                    </div>
+
+                    <div class="email-config-container">
+                        <div class="info-box">
+                            <h3>📋 Status do WhatsApp</h3>
+                            <p id="whatsappStatus"><strong>Status:</strong> <span id="whatsappStatusText">Verificando...</span></p>
+                            <p><strong>Provider:</strong> <span id="whatsappProvider">-</span></p>
+                            <p><strong>Configurado:</strong> <span id="whatsappConfigured">-</span></p>
+                        </div>
+
+                        <div class="email-test-box">
+                            <h3>🧪 Testar WhatsApp</h3>
+                            <p>Envie uma mensagem de teste para verificar se a integração está funcionando:</p>
+                            
+                            <div class="form-group">
+                                <label for="whatsappTelefone">Número de Telefone (com DDD):</label>
+                                <input type="tel" id="whatsappTelefone" placeholder="(11) 98765-4321 ou 11987654321" class="form-control">
+                                <small>Aceita formato: (11) 98765-4321, 11987654321, +5511987654321</small>
+                            </div>
+                            
+                            <button id="btnTestarWhatsApp" class="btn btn-success">💬 Enviar Mensagem de Teste</button>
+                        </div>
+
+                        <div class="email-info-box">
+                            <h3>ℹ️ Como Configurar o WhatsApp</h3>
+                            <p>O sistema suporta três provedores de WhatsApp Business API:</p>
+                            
+                            <h4>1️⃣ Twilio (Recomendado para iniciantes)</h4>
+                            <pre><code># Windows PowerShell:
+$env:WHATSAPP_ENABLED="true"
+$env:WHATSAPP_PROVIDER="twilio"
+$env:TWILIO_ACCOUNT_SID="seu_account_sid"
+$env:TWILIO_AUTH_TOKEN="seu_auth_token"
+$env:TWILIO_WHATSAPP_NUMBER="+14155238886"
+python run.py</code></pre>
+
+                            <h4>2️⃣ MessageBird</h4>
+                            <pre><code># Windows PowerShell:
+$env:WHATSAPP_ENABLED="true"
+$env:WHATSAPP_PROVIDER="messagebird"
+$env:MESSAGEBIRD_API_KEY="sua_api_key"
+$env:MESSAGEBIRD_CHANNEL_ID="seu_channel_id"
+python run.py</code></pre>
+
+                            <h4>3️⃣ Meta (Facebook)</h4>
+                            <pre><code># Windows PowerShell:
+$env:WHATSAPP_ENABLED="true"
+$env:WHATSAPP_PROVIDER="meta"
+$env:META_ACCESS_TOKEN="seu_access_token"
+$env:META_PHONE_NUMBER_ID="seu_phone_number_id"
+python run.py</code></pre>
+
+                            <h4>📱 Notificações Automáticas via WhatsApp:</h4>
+                            <ul>
+                                <li>✅ Confirmação de empréstimos</li>
+                                <li>✅ Confirmação de devoluções</li>
+                                <li>⏰ Lembretes 3 dias antes da devolução</li>
+                                <li>🚨 Alertas de empréstimos atrasados</li>
+                            </ul>
+                            
+                            <h4>💰 Comparação de Custos:</h4>
+                            <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                                <thead>
+                                    <tr style="background: #f3f4f6;">
+                                        <th style="padding: 8px; border: 1px solid #ddd;">Provider</th>
+                                        <th style="padding: 8px; border: 1px solid #ddd;">Custo por Mensagem</th>
+                                        <th style="padding: 8px; border: 1px solid #ddd;">Facilidade</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">Twilio</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">~$0.005 - $0.01</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">⭐⭐⭐⭐⭐ Muito Fácil</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">MessageBird</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">~$0.004 - $0.008</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">⭐⭐⭐⭐ Fácil</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">Meta</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">Grátis (1000/mês)</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">⭐⭐⭐ Moderado</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            
+                            <p><strong>⚠️ Importante:</strong></p>
+                            <ul>
+                                <li>Os números de telefone devem estar registrados no WhatsApp</li>
+                                <li>Para Twilio e MessageBird, é necessário aprovar templates de mensagem</li>
+                                <li>Meta oferece 1000 conversas gratuitas por mês</li>
+                                <li>Consulte <code>whatsapp_config_example.txt</code> para guia detalhado</li>
+                            </ul>
+                            
+                            <p>⏰ <strong>Verificação:</strong> Notificações enviadas junto com e-mails (diariamente às 09:00)</p>
                         </div>
                     </div>
                 </section>
