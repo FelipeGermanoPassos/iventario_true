@@ -4,6 +4,6 @@ SQLAlchemy>=2.0.36
 Flask-Login==0.6.3
 Flask-Mail==0.9.1
 Werkzeug==3.0.1
-qrcode[pil]==7.4.2
+qrcode==7.4.2
 APScheduler==3.10.4
 python-dateutil==2.8.2

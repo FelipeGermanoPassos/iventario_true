@@ -806,18 +806,27 @@ def gerar_qrcode(id):
         qr.add_data(dados_qr)
         qr.make(fit=True)
         
-        # Cria a imagem
-        img = qr.make_image(fill_color="black", back_color="white")
-        
-        # Converte para base64
-        buffer = BytesIO()
-        img.save(buffer, format='PNG')
-        buffer.seek(0)
-        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        # Tenta usar PIL/PNG; caso indisponível, usa SVG (sem Pillow)
+        img_base64 = None
+        mime = 'image/png'
+        try:
+            from PIL import Image  # noqa: F401
+            img = qr.make_image(fill_color="black", back_color="white")
+            buffer = BytesIO()
+            img.save(buffer, format='PNG')
+            buffer.seek(0)
+            img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        except Exception:
+            # Fallback: gerar SVG sem Pillow
+            from qrcode.image.svg import SvgImage
+            img = qr.make_image(image_factory=SvgImage)
+            svg_bytes = img.to_string()
+            img_base64 = base64.b64encode(svg_bytes).decode()
+            mime = 'image/svg+xml'
         
         return jsonify({
             'success': True,
-            'qrcode': f'data:image/png;base64,{img_base64}',
+            'qrcode': f'data:{mime};base64,{img_base64}',
             'equipamento': equipamento.to_dict()
         })
         
