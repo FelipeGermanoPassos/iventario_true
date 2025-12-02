@@ -75,7 +75,23 @@ def login():
             if not email or not senha:
                 return jsonify({'success': False, 'message': 'Email e senha são obrigatórios.'}), 400
             
-            usuario = Usuario.query.filter_by(email=email).first()
+            # Retry logic para conexão com banco
+            max_retries = 3
+            retry_delay = 0.5
+            usuario = None
+            
+            for attempt in range(max_retries):
+                try:
+                    usuario = Usuario.query.filter_by(email=email).first()
+                    break
+                except Exception as db_error:
+                    if attempt < max_retries - 1:
+                        current_app.logger.warning(f'Tentativa {attempt + 1} falhou, tentando novamente...')
+                        import time
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        raise db_error
             
             if usuario and usuario.check_password(senha):
                 if not usuario.ativo:
@@ -83,7 +99,19 @@ def login():
                 
                 login_user(usuario, remember=data.get('lembrar', False))
                 usuario.ultimo_acesso = datetime.utcnow()
-                db.session.commit()
+                
+                # Retry para commit
+                for attempt in range(max_retries):
+                    try:
+                        db.session.commit()
+                        break
+                    except Exception as commit_error:
+                        db.session.rollback()
+                        if attempt < max_retries - 1:
+                            import time
+                            time.sleep(0.5)
+                        else:
+                            current_app.logger.error(f'Falha ao salvar ultimo_acesso: {str(commit_error)}')
                 
                 return jsonify({'success': True, 'message': 'Login realizado com sucesso!'})
             
@@ -93,7 +121,12 @@ def login():
             current_app.logger.error(f'Erro no login: {str(e)}')
             import traceback
             current_app.logger.error(traceback.format_exc())
-            return jsonify({'success': False, 'message': f'Erro interno do servidor: {str(e)}'}), 500
+            
+            # Mensagem mais amigável para erro de conexão
+            if 'OperationalError' in str(type(e).__name__) or 'connection' in str(e).lower():
+                return jsonify({'success': False, 'message': 'Erro de conexão com o banco de dados. Tente novamente em alguns segundos.'}), 503
+            
+            return jsonify({'success': False, 'message': f'Erro interno do servidor. Tente novamente.'}), 500
     
     return render_template('login.html')
 
