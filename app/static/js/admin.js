@@ -32,6 +32,9 @@ function mostrarTab(nomeTab, event) {
     } else if (nomeTab === 'whatsapp') {
         document.getElementById('tabWhatsApp').classList.add('active');
         carregarStatusWhatsApp();
+    } else if (nomeTab === 'telegram') {
+        document.getElementById('tabTelegram').classList.add('active');
+        carregarStatusTelegram();
     }
 }
 
@@ -733,3 +736,160 @@ async function testarWhatsApp() {
         btn.textContent = '💬 Enviar Mensagem de Teste';
     }
 }
+
+// ========== FUNÇÕES DE TELEGRAM ==========
+
+async function carregarStatusTelegram() {
+    try {
+        const response = await fetch('/admin/telegram/status');
+        const data = await response.json();
+        
+        const statusText = document.getElementById('telegramStatusText');
+        const configured = document.getElementById('telegramConfigured');
+        const botUsername = document.getElementById('telegramBotUsername');
+        
+        if (data.enabled) {
+            statusText.textContent = '✅ Habilitado';
+            statusText.style.color = '#10b981';
+        } else {
+            statusText.textContent = '❌ Desabilitado';
+            statusText.style.color = '#ef4444';
+        }
+        
+        if (data.configured) {
+            configured.textContent = '✅ Sim';
+            configured.style.color = '#10b981';
+            
+            // Mostra informações do bot se disponível
+            if (data.bot_info && data.bot_info.username) {
+                botUsername.textContent = `@${data.bot_info.username} (${data.bot_info.first_name})`;
+            } else {
+                botUsername.textContent = 'Configurado';
+            }
+        } else {
+            configured.textContent = '❌ Não';
+            configured.style.color = '#ef4444';
+            botUsername.textContent = '-';
+        }
+        
+    } catch (error) {
+        console.error('Erro ao carregar status do Telegram:', error);
+        document.getElementById('telegramStatusText').textContent = 'Erro ao verificar';
+    }
+}
+
+async function carregarConfigTelegram() {
+    try {
+        const response = await fetch('/admin/telegram-config');
+        const data = await response.json();
+        
+        document.getElementById('telegramEnabled').checked = data.TELEGRAM_ENABLED === 'true';
+        document.getElementById('telegramBotToken').value = data.TELEGRAM_BOT_TOKEN || '';
+        
+        mostrarMensagem('✅ Configurações carregadas!', 'success');
+    } catch (error) {
+        console.error('Erro ao carregar configurações:', error);
+        mostrarMensagem('Erro ao carregar configurações do Telegram.', 'error');
+    }
+}
+
+async function salvarConfigTelegram() {
+    const btn = document.getElementById('btnSalvarTelegram');
+    
+    const config = {
+        TELEGRAM_ENABLED: document.getElementById('telegramEnabled').checked ? 'true' : 'false',
+        TELEGRAM_BOT_TOKEN: document.getElementById('telegramBotToken').value.trim()
+    };
+    
+    // Validação
+    if (config.TELEGRAM_ENABLED === 'true' && !config.TELEGRAM_BOT_TOKEN) {
+        mostrarMensagem('❌ Token do bot é obrigatório quando Telegram está habilitado.', 'error');
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = '💾 Salvando...';
+    
+    try {
+        const response = await fetch('/admin/telegram-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            mostrarMensagem('✅ Configurações salvas com sucesso!', 'success');
+            carregarStatusTelegram();
+        } else {
+            mostrarMensagem(`❌ ${data.message || 'Erro ao salvar configurações'}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar configurações:', error);
+        mostrarMensagem('Erro ao salvar configurações do Telegram.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Salvar Configurações';
+    }
+}
+
+async function testarTelegram() {
+    const btn = document.getElementById('btnTestarTelegram');
+    const chatId = document.getElementById('telegramChatId').value.trim();
+    
+    if (!chatId) {
+        mostrarMensagem('Por favor, digite um Chat ID.', 'error');
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = '📤 Enviando...';
+    
+    try {
+        const response = await fetch('/telegram/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ chat_id: chatId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            mostrarMensagem('✅ Mensagem de teste enviada com sucesso!', 'success');
+        } else {
+            // Preserva quebras de linha da mensagem de erro
+            const message = data.message || 'Erro ao enviar mensagem';
+            mostrarMensagem(`❌ ${message}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao testar Telegram:', error);
+        mostrarMensagem('Erro ao testar Telegram. Verifique as configurações.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '✈️ Enviar Mensagem de Teste';
+    }
+}
+
+// Event listeners para Telegram
+document.addEventListener('DOMContentLoaded', () => {
+    const btnSalvarTelegram = document.getElementById('btnSalvarTelegram');
+    const btnCarregarTelegram = document.getElementById('btnCarregarTelegram');
+    const btnTestarTelegram = document.getElementById('btnTestarTelegram');
+    
+    if (btnSalvarTelegram) {
+        btnSalvarTelegram.addEventListener('click', salvarConfigTelegram);
+    }
+    
+    if (btnCarregarTelegram) {
+        btnCarregarTelegram.addEventListener('click', carregarConfigTelegram);
+    }
+    
+    if (btnTestarTelegram) {
+        btnTestarTelegram.addEventListener('click', testarTelegram);
+    }
+});

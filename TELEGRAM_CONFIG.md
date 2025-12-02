@@ -18,14 +18,14 @@
 **Windows PowerShell:**
 ```powershell
 $env:TELEGRAM_ENABLED="true"
-$env:TELEGRAM_BOT_TOKEN="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789"
+$env:TELEGRAM_BOT_TOKEN="8582112542:AAHyb8dNKC4N6Ae8m-iwahWObJDRuYKsByg"
 python run.py
 ```
 
 **Linux/Mac:**
 ```bash
 export TELEGRAM_ENABLED=true
-export TELEGRAM_BOT_TOKEN="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789"
+export TELEGRAM_BOT_TOKEN="8582112542:AAHyb8dNKC4N6Ae8m-iwahWObJDRuYKsByg"
 python run.py
 ```
 

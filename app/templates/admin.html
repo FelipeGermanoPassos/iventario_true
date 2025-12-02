@@ -60,6 +60,7 @@
                 <button class="tab-button" onclick="mostrarTab('backups', event)">💾 Backups</button>
                 <button class="tab-button" onclick="mostrarTab('email', event)">📧 E-mail</button>
                 <button class="tab-button" onclick="mostrarTab('whatsapp', event)">💬 WhatsApp</button>
+                <button class="tab-button" onclick="mostrarTab('telegram', event)">✈️ Telegram</button>
             </div>
 
             <!-- Tab Usuários -->
@@ -324,6 +325,122 @@ python run.py</code></pre>
                                 <li>Para Twilio e MessageBird, é necessário aprovar templates de mensagem</li>
                                 <li>Meta oferece 1000 conversas gratuitas por mês</li>
                                 <li>Consulte <code>whatsapp_config_example.txt</code> para guia detalhado</li>
+                            </ul>
+                            
+                            <p>⏰ <strong>Verificação:</strong> Notificações enviadas junto com e-mails (diariamente às 09:00)</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab Telegram -->
+            <div id="tabTelegram" class="tab-content">
+                <section class="telegram-section">
+                    <div class="section-header">
+                        <h2>✈️ Configuração do Telegram</h2>
+                    </div>
+
+                    <div class="telegram-config-container">
+                        <div class="info-box">
+                            <h3>📋 Status do Telegram</h3>
+                            <p id="telegramStatus"><strong>Status:</strong> <span id="telegramStatusText">Verificando...</span></p>
+                            <p><strong>Bot Configurado:</strong> <span id="telegramConfigured">-</span></p>
+                            <p id="telegramBotInfo"><strong>Bot:</strong> <span id="telegramBotUsername">-</span></p>
+                        </div>
+
+                        <div class="email-test-box">
+                            <h3>⚙️ Configurar Telegram Bot</h3>
+                            <p>Configure seu bot do Telegram para enviar notificações instantâneas:</p>
+                            
+                            <div class="form-group">
+                                <label for="telegramEnabled">
+                                    <input type="checkbox" id="telegramEnabled">
+                                    Habilitar Telegram
+                                </label>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="telegramBotToken">Token do Bot *</label>
+                                <input type="text" id="telegramBotToken" placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789" class="form-control">
+                                <small>Obtenha com @BotFather no Telegram</small>
+                            </div>
+                            
+                            <div class="button-group">
+                                <button id="btnSalvarTelegram" class="btn btn-primary">💾 Salvar Configurações</button>
+                                <button id="btnCarregarTelegram" class="btn btn-secondary">🔄 Recarregar</button>
+                            </div>
+                            
+                            <hr class="email-divider">
+                            
+                            <h3>🧪 Testar Envio</h3>
+                            <p>Envie uma mensagem de teste para verificar se o bot está funcionando:</p>
+                            
+                            <div class="form-group">
+                                <label for="telegramChatId">Chat ID do Telegram:</label>
+                                <input type="text" id="telegramChatId" placeholder="123456789 ou @username" class="form-control">
+                                <small>Use @userinfobot para descobrir seu Chat ID</small>
+                            </div>
+                            
+                            <button id="btnTestarTelegram" class="btn btn-success">✈️ Enviar Mensagem de Teste</button>
+                        </div>
+
+                        <div class="email-info-box">
+                            <h3>ℹ️ Como Configurar o Telegram Bot</h3>
+                            
+                            <h4>1️⃣ Criar um Bot</h4>
+                            <ol>
+                                <li>Abra o Telegram e procure por <code>@BotFather</code></li>
+                                <li>Envie o comando <code>/newbot</code></li>
+                                <li>Escolha um nome para o bot (ex: "Inventário TI")</li>
+                                <li>Escolha um username (deve terminar com "bot", ex: "inventario_ti_bot")</li>
+                                <li>Copie o <strong>Token</strong> fornecido</li>
+                            </ol>
+
+                            <h4>2️⃣ Obter Chat ID</h4>
+                            <p><strong>Método 1:</strong> Use <code>@userinfobot</code></p>
+                            <ul>
+                                <li>Procure por @userinfobot no Telegram</li>
+                                <li>Envie qualquer mensagem</li>
+                                <li>Ele responderá com seu Chat ID</li>
+                            </ul>
+                            
+                            <p><strong>Método 2:</strong> Use seu próprio bot</p>
+                            <ul>
+                                <li>Inicie conversa com seu bot</li>
+                                <li>Envie <code>/start</code></li>
+                                <li>Acesse: <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code></li>
+                                <li>Procure por <code>"chat":{"id":123456789}</code></li>
+                            </ul>
+
+                            <h4>3️⃣ Configurar via Variáveis de Ambiente</h4>
+                            <pre><code># Windows PowerShell:
+$env:TELEGRAM_ENABLED="true"
+$env:TELEGRAM_BOT_TOKEN="seu-token-aqui"
+python run.py</code></pre>
+
+                            <h4>📱 Notificações Automáticas via Telegram:</h4>
+                            <ul>
+                                <li>✅ Confirmação de empréstimos</li>
+                                <li>✅ Confirmação de devoluções</li>
+                                <li>⏰ Lembretes 3 dias antes da devolução</li>
+                                <li>🚨 Alertas de empréstimos atrasados</li>
+                            </ul>
+                            
+                            <h4>✨ Vantagens do Telegram:</h4>
+                            <ul>
+                                <li>✅ 100% gratuito, sem limites de mensagens</li>
+                                <li>✅ Instantâneo, mais rápido que e-mail</li>
+                                <li>✅ Multiplataforma (Android, iOS, Desktop, Web)</li>
+                                <li>✅ Não precisa compartilhar número de telefone</li>
+                                <li>✅ Suporte a formatação rica (negrito, itálico, emojis)</li>
+                            </ul>
+                            
+                            <p><strong>⚠️ Importante:</strong></p>
+                            <ul>
+                                <li>Cada usuário precisa iniciar conversa com o bot primeiro</li>
+                                <li>Chat IDs são únicos e não expõem informações pessoais</li>
+                                <li>O bot pode enviar mensagens para usuários individuais ou grupos</li>
+                                <li>Consulte <code>TELEGRAM_CONFIG.md</code> para guia detalhado</li>
                             </ul>
                             
                             <p>⏰ <strong>Verificação:</strong> Notificações enviadas junto com e-mails (diariamente às 09:00)</p>
