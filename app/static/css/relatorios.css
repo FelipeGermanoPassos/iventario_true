@@ -1,4 +1,19 @@
 /* ==================== RELATÓRIOS - FILTROS ==================== */
+
+:root {
+    --primary-color: #EF7D2D;
+    --primary-hover: #D96B1F;
+    --secondary-color: #6B6B6B;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --bg-color: #F5F5F5;
+    --card-bg: #ffffff;
+    --text-color: #4A4A4A;
+    --text-secondary: #6B6B6B;
+    --border-color: #E0E0E0;
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
 .filtros-container {
     margin-bottom: 30px;
 }
