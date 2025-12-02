@@ -553,7 +553,6 @@ O sistema é totalmente responsivo e funciona em:
 - [ ] **Assinatura digital**: Registrar assinatura do responsável na retirada
 
 ### 📱 Mobile e Integração
-- [x] **Notificações push no PWA**: Alertas instantâneos no app mobile ✅
 - [ ] **App nativo**: Versão iOS (Swift) e Android (Kotlin)
 - [ ] **Leitor de QR Code integrado**: Scan direto pelo app para identificar equipamentos
 - [ ] **Modo offline**: Funcionalidade limitada sem internet
