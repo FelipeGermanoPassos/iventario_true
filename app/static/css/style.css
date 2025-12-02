@@ -552,6 +552,76 @@ tbody tr:hover {
     gap: 15px;
 }
 
+/* Classes para remover inline styles */
+.stat-card.clickable {
+    cursor: pointer;
+}
+
+.charts-grid.charts-grid-spacing {
+    margin-top: 20px;
+}
+
+.campo-computador,
+.campo-notebook,
+.campo-periferico {
+    display: none;
+}
+
+.foto-preview-container {
+    margin-top: 8px;
+}
+
+#fotoPreview {
+    max-width: 160px;
+    max-height: 120px;
+    display: none;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.equipamento-select-spacing {
+    margin-top: 10px;
+}
+
+.table-container.table-spacing {
+    margin-bottom: 16px;
+}
+
+.loading-row {
+    text-align: center;
+    padding: 24px;
+}
+
+.empty-row {
+    text-align: center;
+    padding: 30px;
+}
+
+.modal-qrcode {
+    max-width: 400px;
+}
+
+#qrcodeContainer {
+    text-align: center;
+    padding: 20px;
+}
+
+#qrcodeInfo {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+#qrcodeImage {
+    max-width: 100%;
+    border: 2px solid #ddd;
+    padding: 10px;
+    background: white;
+}
+
+.qrcode-actions {
+    margin-top: 15px;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
     header {

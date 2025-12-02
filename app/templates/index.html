@@ -108,7 +108,7 @@
                         <p>Empréstimos (Últimos 30 dias)</p>
                     </div>
                 </div>
-                <div class="stat-card" id="statNotificacoes" style="cursor:pointer;" onclick="mostrarNotificacoes()" title="Clique para ver detalhes">
+                <div class="stat-card clickable" id="statNotificacoes" onclick="mostrarNotificacoes()" title="Clique para ver detalhes">
                     <div class="stat-icon">🔔</div>
                     <div class="stat-content">
                         <h3 id="totalNotificacoes">0</h3>
@@ -128,7 +128,7 @@
                 </div>
             </div>
 
-            <div class="charts-grid" style="margin-top: 20px;">
+            <div class="charts-grid charts-grid-spacing">
                 <div class="chart-card">
                     <h3>Empréstimos Ativos por Departamento</h3>
                     <canvas id="departamentoChart"></canvas>
@@ -267,33 +267,33 @@
                     </div>
                     
                     <!-- Campos específicos para Computador/Notebook -->
-                    <div class="form-group campo-computador campo-notebook" style="display: none;">
+                    <div class="form-group campo-computador campo-notebook">
                         <label for="processador">Processador</label>
                         <input type="text" id="processador" name="processador" placeholder="Ex: Intel Core i5">
                     </div>
                     
-                    <div class="form-group campo-computador campo-notebook" style="display: none;">
+                    <div class="form-group campo-computador campo-notebook">
                         <label for="memoria_ram">Memória RAM *</label>
                         <input type="text" id="memoria_ram" name="memoria_ram" placeholder="Ex: 16GB">
                     </div>
                     
-                    <div class="form-group campo-computador campo-notebook" style="display: none;">
+                    <div class="form-group campo-computador campo-notebook">
                         <label for="armazenamento">Armazenamento *</label>
                         <input type="text" id="armazenamento" name="armazenamento" placeholder="Ex: 512GB SSD">
                     </div>
                     
-                    <div class="form-group campo-computador campo-notebook" style="display: none;">
+                    <div class="form-group campo-computador campo-notebook">
                         <label for="sistema_operacional">Sistema Operacional</label>
                         <input type="text" id="sistema_operacional" name="sistema_operacional" placeholder="Ex: Windows 11">
                     </div>
                     
                     <!-- Campos específicos para Periféricos -->
-                    <div class="form-group campo-periferico" style="display: none;">
+                    <div class="form-group campo-periferico">
                         <label for="conectividade">Conectividade</label>
                         <input type="text" id="conectividade" name="conectividade" placeholder="Ex: USB, Bluetooth, WiFi">
                     </div>
                     
-                    <div class="form-group campo-periferico" style="display: none;">
+                    <div class="form-group campo-periferico">
                         <label for="compatibilidade">Compatibilidade</label>
                         <input type="text" id="compatibilidade" name="compatibilidade" placeholder="Ex: Windows, Mac, Linux">
                     </div>
@@ -310,9 +310,9 @@
                     
                     <div class="form-group">
                         <label for="foto">Foto do Equipamento</label>
-                        <input type="file" id="foto" name="foto" accept="image/*" capture="environment">
-                        <div style="margin-top:8px;">
-                            <img id="fotoPreview" src="" alt="Pré-visualização" style="max-width: 160px; max-height: 120px; display: none; border: 1px solid #ddd; border-radius: 6px;" />
+                        <input type="file" id="foto" name="foto" accept="image/*">
+                        <div class="foto-preview-container">
+                            <img id="fotoPreview" src="" alt="Pré-visualização da foto do equipamento" />
                         </div>
                     </div>
                     
@@ -340,7 +340,7 @@
                     <div class="form-group full-width">
                         <label for="equipamento_select">Equipamento *</label>
                         <input type="text" id="equipamento_search" placeholder="🔍 Buscar equipamento por nome, tipo ou número de série..." onkeyup="filtrarEquipamentosEstoque()">
-                        <select id="equipamento_select" name="equipamento_id" required size="6" style="margin-top: 10px;">
+                        <select id="equipamento_select" name="equipamento_id" required size="6" class="equipamento-select-spacing">
                             <!-- Opções serão inseridas via JavaScript -->
                         </select>
                     </div>
@@ -390,7 +390,7 @@
             <span class="close close-manutencao">&times;</span>
             <h2>🛠️ Manutenções do Equipamento</h2>
             <div class="manutencao-container">
-                <div class="table-container" style="margin-bottom:16px;">
+                <div class="table-container table-spacing">
                     <table class="relatorios-table">
                         <thead>
                             <tr>
@@ -406,7 +406,7 @@
                             </tr>
                         </thead>
                         <tbody id="manutencoesBody">
-                            <tr><td colspan="9" style="text-align:center;padding:24px;">Carregando histórico...</td></tr>
+                            <tr><td colspan="9" class="loading-row">Carregando histórico...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -466,14 +466,14 @@
     </div>
     <!-- Modal QR Code -->
     <div id="modalQRCode" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content modal-qrcode">
             <span class="close" onclick="fecharModalQRCode()">&times;</span>
             <h2>QR Code do Equipamento</h2>
             
-            <div id="qrcodeContainer" style="text-align: center; padding: 20px;">
-                <div id="qrcodeInfo" style="margin-bottom: 15px; text-align: left;"></div>
-                <img id="qrcodeImage" style="max-width: 100%; border: 2px solid #ddd; padding: 10px; background: white;" />
-                <div style="margin-top: 15px;">
+            <div id="qrcodeContainer">
+                <div id="qrcodeInfo"></div>
+                <img id="qrcodeImage" alt="QR Code do equipamento" />
+                <div class="qrcode-actions">
                     <button onclick="baixarQRCode()" class="btn btn-primary">
                         📥 Baixar QR Code
                     </button>
