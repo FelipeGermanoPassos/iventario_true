@@ -4,6 +4,12 @@ SQLAlchemy
 Flask-Login
 Flask-Mail
 Werkzeug
+Jinja2
+itsdangerous
+MarkupSafe
+blinker
 qrcode
 APScheduler
 python-dateutil
+tzlocal
+typing_extensions
