@@ -1287,12 +1287,19 @@ def exportar_relatorio_pdf():
     """Exporta relatório de empréstimos em PDF"""
     try:
         # Importações pesadas movidas para dentro da função (melhor para serverless)
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4, landscape
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import cm
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+        try:
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import A4, landscape
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.units import cm
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+            from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+        except Exception as _imp_err:
+            return jsonify({
+                'success': False,
+                'message': 'Geração de PDF indisponível neste deploy (dependência ausente).',
+                'detalhe': str(_imp_err)
+            }), 501
 
         filtro = request.args.get('filtro', 'todos')
         data_inicio = request.args.get('data_inicio')

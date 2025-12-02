@@ -340,9 +340,9 @@ ngrok http http://localhost:5000
 
 Esta aplicação Flask pode rodar na Vercel em modo serverless. Já incluímos os arquivos necessários:
 
-- `vercel.json` (roteia tudo para `api/index.py`)
-- `api/index.py` (exporta `app = create_app()`)
- - `api/requirements.txt` (deps leves para Vercel, sem IA pesada)
+- `vercel.json` (roteia tudo para `api/app.py`)
+- `api/app.py` (exporta `app = create_app()`)
+ - `api/requirements.txt` (deps leves para Vercel, sem IA/relatório/push pesados)
  - `.vercelignore` (evita enviar `requirements.txt` da raiz)
 
 Importante: ambientes serverless têm limitações. Veja o que ajustar antes do deploy:
@@ -388,7 +388,12 @@ vercel --prod
 
 - No painel da Vercel, configure as variáveis de ambiente citadas acima.
 
-Nota sobre dependências: o deploy serverless usa `api/requirements.txt` (sem numpy/pandas/scikit-learn). A API de IA retorna 501 nesse ambiente. Para IA em produção, hospede a rota de IA em outro serviço com as dependências ou ajuste o deploy para suportá-las.
+Nota sobre dependências: o deploy serverless usa `api/requirements.txt` (sem numpy/pandas/scikit-learn, ReportLab e pywebpush). Nessas condições:
+- Rota de IA: retorna 501 (dependências ausentes).
+- Exportação PDF: retorna 501 (ReportLab ausente).
+- Push notifications: indisponíveis (pywebpush ausente).
+
+Para ter esses recursos em produção, hospede-os em um serviço separado com dependências completas (ex.: Render/Fly/Railway) ou aceite cold start maior e tente empacotar as libs no build.
 
 Observações:
 - Todos os assets estáticos continuam sendo servidos pelo Flask via função serverless.

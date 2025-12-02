@@ -1,14 +1,23 @@
 """
 Serviço de envio de Push Notifications
 """
-from pywebpush import webpush, WebPushException
 from flask import current_app
 import json
 import os
 
+try:
+    from pywebpush import webpush, WebPushException
+except Exception:  # pywebpush ausente no ambiente serverless
+    webpush = None
+    class WebPushException(Exception):
+        pass
+
 
 class PushNotificationService:
     """Gerencia o envio de push notifications"""
+    @staticmethod
+    def is_available():
+        return webpush is not None
     
     @staticmethod
     def get_vapid_keys():
@@ -45,6 +54,9 @@ class PushNotificationService:
             return False
         
         try:
+            if webpush is None:
+                current_app.logger.warning('pywebpush não está instalado neste deploy; push desabilitado.')
+                return False
             # Prepara o payload da notificação
             payload = {
                 'title': title,
