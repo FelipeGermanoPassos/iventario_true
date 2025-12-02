@@ -629,7 +629,7 @@ O sistema é totalmente responsivo e funciona em:
 
 ### 📊 Análise e Inteligência
 - [x] **Dashboard executivo**: Métricas gerenciais e KPIs (custo por departamento, ROI de equipamentos)
-- [ ] **Previsão de demanda**: IA para prever necessidades de compra baseado no histórico
+- [x] **Previsão de demanda**: IA para prever necessidades de compra baseado no histórico ✅
 - [ ] **Análise de uso**: Identificar equipamentos subutilizados ou mais requisitados
 - [ ] **Relatórios agendados**: Envio automático de relatórios semanais/mensais por e-mail
 - [ ] **Comparativo temporal**: Gráficos de evolução (mês a mês, ano a ano)

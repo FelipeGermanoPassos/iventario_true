@@ -134,6 +134,20 @@ header h1 {
     box-shadow: var(--shadow-lg);
 }
 
+.btn-previsao {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.btn-previsao:hover {
+    background: linear-gradient(135deg, #0d7a70 0%, #2dcf65 100%);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
 /* Botões */
 .btn {
     padding: 10px 20px;

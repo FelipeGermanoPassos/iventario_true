@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Previsão de Demanda - Sistema de Inventário</title>
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#EF7D2D">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/previsao_demanda.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Previsão de Demanda com IA</h1>
+            <div class="header-buttons">
+                <a href="{{ url_for('main.index') }}" class="btn btn-secondary">← Voltar ao Dashboard</a>
+                <a href="{{ url_for('main.dashboard_executivo') }}" class="btn btn-dashboard-exec">📈 Dashboard Executivo</a>
+                <a href="{{ url_for('main.perfil') }}" class="user-name">👤 {{ current_user.nome }}</a>
+                <a href="{{ url_for('main.logout') }}" class="btn btn-logout">🚪 Sair</a>
+            </div>
+        </header>
+
+        <div class="prediction-container">
+            <!-- Header com informações -->
+            <div class="prediction-header">
+                <div class="info-card">
+                    <div class="info-icon">🔮</div>
+                    <div class="info-content">
+                        <h3>Análise Preditiva</h3>
+                        <p>Machine Learning para prever necessidades de compra</p>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">📊</div>
+                    <div class="info-content">
+                        <h3 id="horizonte">Próximos 90 dias</h3>
+                        <p>Horizonte de previsão</p>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">🎯</div>
+                    <div class="info-content">
+                        <h3 id="totalPrevisoes">0</h3>
+                        <p>Tipos analisados</p>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">⏰</div>
+                    <div class="info-content">
+                        <h3 id="dataAnalise">-</h3>
+                        <p>Última atualização</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alertas e Mensagens -->
+            <div id="alertasContainer"></div>
+
+            <!-- Tabela de Previsões -->
+            <section class="previsoes-section">
+                <div class="section-header">
+                    <h2>📋 Recomendações de Compra</h2>
+                    <button id="btnAtualizar" class="btn btn-primary">🔄 Atualizar Análise</button>
+                </div>
+
+                <div class="previsoes-table-container">
+                    <table class="previsoes-table">
+                        <thead>
+                            <tr>
+                                <th>Tipo de Equipamento</th>
+                                <th>Estoque</th>
+                                <th>Tendência</th>
+                                <th>Taxa Utilização</th>
+                                <th>Crescimento</th>
+                                <th>Prioridade</th>
+                                <th>Recomendação</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previsoesTableBody">
+                            <tr>
+                                <td colspan="8" class="loading-row">
+                                    🔄 Analisando dados históricos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Gráficos -->
+            <div class="charts-row">
+                <div class="chart-container">
+                    <h3>📈 Tendências por Tipo</h3>
+                    <canvas id="chartTendencias"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>🌊 Sazonalidade de Demanda</h3>
+                    <canvas id="chartSazonalidade"></canvas>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-container">
+                    <h3>🎯 Prioridades de Compra</h3>
+                    <canvas id="chartPrioridades"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>📊 Taxa de Utilização</h3>
+                    <canvas id="chartUtilizacao"></canvas>
+                </div>
+            </div>
+
+            <!-- Insights e Análises -->
+            <section class="insights-section">
+                <h2>💡 Insights da Análise Preditiva</h2>
+                <div id="insightsContainer" class="insights-grid">
+                    <div class="insight-card">
+                        <div class="insight-icon">🔍</div>
+                        <p>Analisando histórico de empréstimos...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Detalhes por Tipo (Modal) -->
+            <div id="modalDetalhes" class="modal">
+                <div class="modal-content modal-large">
+                    <div class="modal-header">
+                        <h2 id="modalTitulo">Detalhes da Previsão</h2>
+                        <span class="close">&times;</span>
+                    </div>
+                    <div id="modalBody" class="modal-body">
+                        <!-- Preenchido dinamicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/previsao_demanda.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
+</body>
+</html>

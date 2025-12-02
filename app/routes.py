@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response, current_app, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import db, Equipamento, Emprestimo, Usuario, EquipamentoFoto, Manutencao
+from app.prediction_service import prediction_service
 from datetime import datetime
 from sqlalchemy import func
 from functools import wraps
@@ -1744,6 +1745,43 @@ def dashboard_executivo_dados():
         return jsonify({
             'success': False,
             'message': f'Erro ao gerar dados: {str(e)}'
+        }), 400
+
+# ====== ROTAS DE PREVISÃO DE DEMANDA (IA) ======
+
+@main.route('/previsao-demanda')
+@login_required
+def previsao_demanda():
+    """Renderiza a página de previsão de demanda"""
+    return render_template('previsao_demanda.html')
+
+@main.route('/previsao-demanda/dados')
+@login_required
+def previsao_demanda_dados():
+    """API para obter previsões de demanda baseadas em IA"""
+    try:
+        # Análise de demanda por tipo
+        resultado = prediction_service.analisar_demanda_por_tipo()
+        
+        # Análise de sazonalidade
+        sazonalidade = prediction_service.analisar_sazonalidade()
+        
+        return jsonify({
+            'success': True,
+            'previsoes': resultado.get('previsoes', []),
+            'sazonalidade': sazonalidade if sazonalidade.get('sucesso') else None,
+            'horizonte_dias': resultado.get('horizonte_dias', 90),
+            'data_analise': resultado.get('data_analise'),
+            'mensagem': resultado.get('mensagem')
+        })
+        
+    except Exception as e:
+        print(f"Erro ao gerar previsão de demanda: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao gerar previsões: {str(e)}'
         }), 400
 
 # ====== ROTAS DE E-MAIL ======
