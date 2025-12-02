@@ -336,6 +336,60 @@ ngrok http http://localhost:5000
 - Service Worker (necessário para PWA) exige HTTPS em dispositivos móveis
 - Se atualizou o sistema e não viu mudanças no app, feche e reabra o aplicativo (o SW atualiza em segundo plano)
 
+## ☁️ Deploy na Vercel (Serverless)
+
+Esta aplicação Flask pode rodar na Vercel em modo serverless. Já incluímos os arquivos necessários:
+
+- `vercel.json` (roteia tudo para `api/index.py`)
+- `api/index.py` (exporta `app = create_app()`)
+
+Importante: ambientes serverless têm limitações. Veja o que ajustar antes do deploy:
+
+1. Banco de dados (obrigatório)
+
+- Vercel não oferece filesystem persistente; SQLite local não persiste entre execuções.
+- Use um Postgres/MySQL gerenciado (ex.: Neon, Supabase, PlanetScale).
+- Configure a variável de ambiente `DATABASE_URL` na Vercel (ex.: `postgresql://...`).
+- O app já usa `DATABASE_URL` se definido.
+
+1. Secret e e-mail (recomendado)
+
+- Defina `SECRET_KEY` com um valor seguro.
+- Se usar e-mail, defina: `MAIL_ENABLED=true`, `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USE_TLS`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_DEFAULT_SENDER`.
+
+1. Notificações Push / WhatsApp / Telegram (opcional)
+
+- Push: defina `VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY`.
+- WhatsApp: variáveis conforme provedor (`WHATSAPP_*`).
+- Telegram: `TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`.
+
+1. Uploads e Backups (atenção)
+
+- Em serverless, gravação em disco é efêmera. Ajustamos para usar diretórios temporários no runtime; os arquivos não persistem.
+- Para produção, mova uploads para storage externo (ex.: S3/Cloudinary) e backups para um serviço adequado.
+
+1. Tarefas agendadas (scheduler)
+
+- O `APScheduler` foi desabilitado automaticamente na Vercel.
+- Use Vercel Cron Jobs para chamar endpoints dedicados (ou hospede o agendador em um serviço com processos persistentes, como Render/Fly.io/Railway).
+
+1. Passo a passo do deploy
+
+- Instale a CLI: `npm i -g vercel`
+- Faça login: `vercel login`
+- Na raiz do projeto, rode:
+
+```bash
+vercel
+vercel --prod
+```
+
+- No painel da Vercel, configure as variáveis de ambiente citadas acima.
+
+Observações:
+- Todos os assets estáticos continuam sendo servidos pelo Flask via função serverless.
+- Se preferir, hospede apenas o frontend estático na Vercel e o backend Flask em outra plataforma (com banco/armazenamento persistente).
+
 ## 📂 Estrutura do Projeto
 
 ```

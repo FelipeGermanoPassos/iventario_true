@@ -3,14 +3,17 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
 import os
+import tempfile
 
 def create_app():
     app = Flask(__name__)
     
     # Configurações
-    app.config['SECRET_KEY'] = 'sua-chave-secreta-aqui-mude-em-producao'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inventario.db'
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'sua-chave-secreta-aqui-mude-em-producao')
+    # Permite substituir o banco via variável de ambiente (necessário para Vercel/Postgres)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI') or 'sqlite:///inventario.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    is_vercel = bool(os.environ.get('VERCEL'))
     
     # Configurações de E-mail
     # Carrega do arquivo .env se existir, senão usa variáveis de ambiente
@@ -33,13 +36,20 @@ def create_app():
         app.config['MAIL_ENABLED'] = os.environ.get('MAIL_ENABLED', 'false').lower() == 'true'
     
     # Uploads de fotos (armazenadas em static/uploads/equipamentos)
-    uploads_dir = os.path.join(os.path.dirname(__file__), 'static', 'uploads', 'equipamentos')
+    # Em ambientes serverless (ex.: Vercel) o filesystem é efêmero/readonly; usa tempdir
+    if is_vercel:
+        uploads_dir = os.path.join(tempfile.gettempdir(), 'uploads_equipamentos')
+    else:
+        uploads_dir = os.path.join(os.path.dirname(__file__), 'static', 'uploads', 'equipamentos')
     os.makedirs(uploads_dir, exist_ok=True)
     app.config['UPLOAD_FOLDER_EQUIPAMENTOS'] = uploads_dir
     app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB por requisição
     
     # Backups do banco de dados
-    backup_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'backups')
+    if is_vercel:
+        backup_dir = os.path.join(tempfile.gettempdir(), 'backups')
+    else:
+        backup_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'backups')
     os.makedirs(backup_dir, exist_ok=True)
     app.config['BACKUP_FOLDER'] = backup_dir
     
@@ -70,40 +80,41 @@ def create_app():
     from app.routes import main
     app.register_blueprint(main)
     
-    # Configura tarefas agendadas
-    from apscheduler.schedulers.background import BackgroundScheduler
-    from app.routes import realizar_backup_automatico
-    from app.email_service import verificar_e_enviar_notificacoes
-    
-    scheduler = BackgroundScheduler()
-    
-    # Backup diário às 02:00
-    scheduler.add_job(
-        func=lambda: realizar_backup_automatico(app),
-        trigger='cron',
-        hour=2,
-        minute=0,
-        id='backup_diario',
-        name='Backup Diário do Banco de Dados',
-        replace_existing=True
-    )
-    
-    # Verificar notificações de email diariamente às 09:00
-    if app.config['MAIL_ENABLED']:
+    # Configura tarefas agendadas (desabilitadas em ambientes serverless como Vercel)
+    if not is_vercel and os.environ.get('SCHEDULER_ENABLED', 'true').lower() == 'true':
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from app.routes import realizar_backup_automatico
+        from app.email_service import verificar_e_enviar_notificacoes
+
+        scheduler = BackgroundScheduler()
+
+        # Backup diário às 02:00
         scheduler.add_job(
-            func=lambda: verificar_e_enviar_notificacoes(app),
+            func=lambda: realizar_backup_automatico(app),
             trigger='cron',
-            hour=9,
+            hour=2,
             minute=0,
-            id='notificacoes_email',
-            name='Verificar e Enviar Notificações de Email',
+            id='backup_diario',
+            name='Backup Diário do Banco de Dados',
             replace_existing=True
         )
-    
-    scheduler.start()
-    
-    # Shutdown do scheduler quando a app terminar
-    import atexit
-    atexit.register(lambda: scheduler.shutdown())
+
+        # Verificar notificações de email diariamente às 09:00
+        if app.config['MAIL_ENABLED']:
+            scheduler.add_job(
+                func=lambda: verificar_e_enviar_notificacoes(app),
+                trigger='cron',
+                hour=9,
+                minute=0,
+                id='notificacoes_email',
+                name='Verificar e Enviar Notificações de Email',
+                replace_existing=True
+            )
+
+        scheduler.start()
+
+        # Shutdown do scheduler quando a app terminar
+        import atexit
+        atexit.register(lambda: scheduler.shutdown())
     
     return app
