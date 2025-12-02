@@ -30,6 +30,25 @@ def health():
         'message': 'API is running'
     })
 
+@main.route('/debug/config')
+def debug_config():
+    """Rota de debug para verificar configuração (REMOVER EM PRODUÇÃO!)"""
+    import os
+    db_url = os.environ.get('DATABASE_URL', 'NOT SET')
+    # Oculta a senha da URL do banco
+    if db_url and db_url != 'NOT SET':
+        db_url_safe = db_url.split('@')[1] if '@' in db_url else 'CONFIGURED'
+    else:
+        db_url_safe = db_url
+    
+    return jsonify({
+        'database_configured': bool(os.environ.get('DATABASE_URL')),
+        'database_host': db_url_safe,
+        'secret_key_configured': bool(os.environ.get('SECRET_KEY')),
+        'is_vercel': bool(os.environ.get('VERCEL')),
+        'app_database_uri': current_app.config.get('SQLALCHEMY_DATABASE_URI', '').split('@')[1] if '@' in current_app.config.get('SQLALCHEMY_DATABASE_URI', '') else 'NOT CONFIGURED'
+    })
+
 # Decorator para verificar se usuário é admin
 def admin_required(f):
     @wraps(f)
