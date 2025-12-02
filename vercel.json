@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "installCommand": "pip3 install --disable-pip-version-check --no-compile --no-cache-dir -r api/requirements.txt",
   "routes": [
     { "src": "/(.*)", "dest": "/api/app.py" }
   ]
