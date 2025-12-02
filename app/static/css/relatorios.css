@@ -123,7 +123,7 @@
 }
 
 .stat-card-relatorio.status-ativo {
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid var(--primary-color);
 }
 
 .stat-card-relatorio.status-devolvido {

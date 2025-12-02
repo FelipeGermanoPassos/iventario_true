@@ -87,13 +87,13 @@ header h1 {
 }
 
 .btn-logout:hover {
-    background-color: #dc2626;
+    background-color: var(--danger-color);
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
 }
 
 .btn-admin {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
     color: white;
     padding: 8px 16px;
     font-size: 0.9rem;
@@ -101,13 +101,13 @@ header h1 {
 }
 
 .btn-admin:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: linear-gradient(135deg, var(--primary-hover) 0%, #C45F15 100%);
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
 }
 
 .btn-relatorios {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
     color: white;
     padding: 8px 16px;
     font-size: 0.9rem;
@@ -140,7 +140,7 @@ header h1 {
 }
 
 .btn-primary:hover {
-    background-color: #1d4ed8;
+    background-color: var(--primary-hover);
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
 }

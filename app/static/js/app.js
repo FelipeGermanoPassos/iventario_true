@@ -238,7 +238,7 @@ function criarGraficos(data) {
             labels: data.status.map(s => s.name),
             datasets: [{
                 data: data.status.map(s => s.value),
-                backgroundColor: ['#10b981', '#2563eb', '#ef4444', '#f59e0b'],
+                backgroundColor: ['#10b981', '#EF7D2D', '#ef4444', '#f59e0b'],
                 borderWidth: 2,
                 borderColor: '#ffffff'
             }]
@@ -264,7 +264,7 @@ function criarGraficos(data) {
             datasets: [{
                 label: 'Quantidade',
                 data: data.tipos.map(t => t.value),
-                backgroundColor: '#2563eb',
+                backgroundColor: '#EF7D2D',
                 borderRadius: 8
             }]
         },
