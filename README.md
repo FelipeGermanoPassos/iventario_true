@@ -33,10 +33,19 @@ Sistema web completo para gerenciamento de equipamentos de TI com controle de es
   - Total de equipamentos
   - Equipamentos em estoque
   - Equipamentos emprestados
+  - Equipamentos em manutenção
+  - Taxa de utilização de equipamentos
   - Valor total do inventário
+  - Valor médio por equipamento
+  - Custo total de manutenções
+  - Manutenções pendentes
+  - Empréstimos recentes (últimos 30 dias)
+  - Devoluções pendentes
 - 📈 **Gráficos Visuais**:
   - Equipamentos por status (rosca)
   - Equipamentos por tipo (barras)
+  - Empréstimos ativos por departamento (barras horizontais)
+  - Top 5 equipamentos mais emprestados (barras horizontais)
   
 ### Recursos Adicionais
 - 🔍 **Busca em Tempo Real**: Filtragem rápida de equipamentos e empréstimos
@@ -392,7 +401,7 @@ O sistema é totalmente responsivo e funciona em:
 - [x] Alertas de empréstimos atrasados
 - [x] QR Code para identificação rápida
 - [x] Backup automático do banco de dados
-- [ ] Dashboard com mais métricas (empréstimos por departamento, etc.)
+- [x] Dashboard com mais métricas (empréstimos por departamento, taxa de utilização, custos de manutenção, equipamentos populares)
 
 ## 📝 Licença
 

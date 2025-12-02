@@ -144,12 +144,24 @@ async function carregarDashboard() {
         const response = await fetch('/dashboard-data');
         const data = await response.json();
 
-        // Atualizar estatísticas
+        // Atualizar estatísticas básicas
         document.getElementById('totalEquipamentos').textContent = data.total_equipamentos;
         document.getElementById('equipamentosEstoque').textContent = data.equipamentos_estoque;
         document.getElementById('equipamentosEmprestados').textContent = data.equipamentos_emprestados;
+        
+        // Novas métricas
+        document.getElementById('equipamentosManutencao').textContent = data.equipamentos_manutencao || 0;
+        document.getElementById('taxaUtilizacao').textContent = `${data.taxa_utilizacao || 0}%`;
+        document.getElementById('emprestimosRecentes').textContent = data.emprestimos_recentes || 0;
+        document.getElementById('manutencoesPendentes').textContent = data.manutencoes_pendentes || 0;
+        
+        // Valores monetários
         document.getElementById('valorTotal').textContent = 
             `R$ ${data.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('valorMedio').textContent = 
+            `R$ ${data.valor_medio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('custoManutencoes').textContent = 
+            `R$ ${data.custo_manutencoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
         // Criar gráficos
         criarGraficos(data);
@@ -266,6 +278,74 @@ function criarGraficos(data) {
             },
             scales: {
                 y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+
+    // Gráfico de Empréstimos por Departamento
+    const deptCtx = document.getElementById('departamentoChart').getContext('2d');
+    if (charts.departamento) charts.departamento.destroy();
+    charts.departamento = new Chart(deptCtx, {
+        type: 'bar',
+        data: {
+            labels: data.emprestimos_por_departamento.map(d => d.name),
+            datasets: [{
+                label: 'Empréstimos Ativos',
+                data: data.emprestimos_por_departamento.map(d => d.value),
+                backgroundColor: '#10b981',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+
+    // Gráfico de Equipamentos Mais Populares
+    const popularCtx = document.getElementById('popularesChart').getContext('2d');
+    if (charts.populares) charts.populares.destroy();
+    charts.populares = new Chart(popularCtx, {
+        type: 'bar',
+        data: {
+            labels: data.equipamentos_populares.map(e => e.nome),
+            datasets: [{
+                label: 'Total de Empréstimos',
+                data: data.equipamentos_populares.map(e => e.emprestimos),
+                backgroundColor: '#f59e0b',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
                     beginAtZero: true,
                     ticks: {
                         precision: 0

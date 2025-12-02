@@ -520,6 +520,8 @@ def service_worker():
 @login_required
 def dashboard_data():
     """Retorna dados para o dashboard"""
+    from datetime import timedelta
+    
     # Total de equipamentos
     total_equipamentos = Equipamento.query.count()
     
@@ -541,16 +543,66 @@ def dashboard_data():
     # Equipamentos emprestados
     equipamentos_emprestados = Equipamento.query.filter_by(status='Emprestado').count()
     
+    # Equipamentos em manutenção
+    equipamentos_manutencao = Equipamento.query.filter_by(status='Manutenção').count()
+    
     # Valor total do inventário
     valor_total = db.session.query(func.sum(Equipamento.valor)).scalar() or 0
+    
+    # Empréstimos ativos
+    emprestimos_ativos = Emprestimo.query.filter_by(status='Ativo').count()
+    
+    # Empréstimos por departamento (ativos)
+    emprestimos_por_dept = db.session.query(
+        Emprestimo.departamento,
+        func.count(Emprestimo.id)
+    ).filter(Emprestimo.status == 'Ativo').group_by(
+        Emprestimo.departamento
+    ).order_by(func.count(Emprestimo.id).desc()).limit(10).all()
+    
+    # Taxa de utilização (emprestados / total)
+    taxa_utilizacao = (equipamentos_emprestados / total_equipamentos * 100) if total_equipamentos > 0 else 0
+    
+    # Equipamentos mais emprestados (histórico completo)
+    equipamentos_populares = db.session.query(
+        Equipamento.nome,
+        Equipamento.tipo,
+        func.count(Emprestimo.id).label('total_emprestimos')
+    ).join(Emprestimo, Equipamento.id == Emprestimo.equipamento_id).group_by(
+        Equipamento.id
+    ).order_by(func.count(Emprestimo.id).desc()).limit(5).all()
+    
+    # Empréstimos nos últimos 30 dias
+    trinta_dias_atras = datetime.utcnow() - timedelta(days=30)
+    emprestimos_recentes = Emprestimo.query.filter(
+        Emprestimo.data_emprestimo >= trinta_dias_atras
+    ).count()
+    
+    # Custo total de manutenções
+    custo_manutencoes = db.session.query(func.sum(Manutencao.custo)).scalar() or 0
+    
+    # Manutenções pendentes (em andamento)
+    manutencoes_pendentes = Manutencao.query.filter_by(status='Em Andamento').count()
+    
+    # Valor médio dos equipamentos
+    valor_medio = (valor_total / total_equipamentos) if total_equipamentos > 0 else 0
     
     return jsonify({
         'total_equipamentos': total_equipamentos,
         'equipamentos_estoque': equipamentos_estoque,
         'equipamentos_emprestados': equipamentos_emprestados,
+        'equipamentos_manutencao': equipamentos_manutencao,
+        'emprestimos_ativos': emprestimos_ativos,
+        'emprestimos_recentes': emprestimos_recentes,
+        'manutencoes_pendentes': manutencoes_pendentes,
+        'taxa_utilizacao': round(taxa_utilizacao, 1),
+        'valor_total': float(valor_total),
+        'valor_medio': float(valor_medio),
+        'custo_manutencoes': float(custo_manutencoes),
         'status': [{'name': s[0], 'value': s[1]} for s in status_data],
         'tipos': [{'name': t[0], 'value': t[1]} for t in tipo_data],
-        'valor_total': float(valor_total)
+        'emprestimos_por_departamento': [{'name': d[0] or 'Sem Departamento', 'value': d[1]} for d in emprestimos_por_dept],
+        'equipamentos_populares': [{'nome': e[0], 'tipo': e[1], 'emprestimos': e[2]} for e in equipamentos_populares]
     })
 
 @main.route('/equipamentos')

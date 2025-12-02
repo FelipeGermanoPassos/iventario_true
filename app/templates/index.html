@@ -60,10 +60,52 @@
                     </div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-icon">�️</div>
+                    <div class="stat-content">
+                        <h3 id="equipamentosManutencao">0</h3>
+                        <p>Em Manutenção</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-content">
+                        <h3 id="taxaUtilizacao">0%</h3>
+                        <p>Taxa de Utilização</p>
+                    </div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-icon">💰</div>
                     <div class="stat-content">
                         <h3 id="valorTotal">R$ 0,00</h3>
-                        <p>Valor Total</p>
+                        <p>Valor Total do Inventário</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💵</div>
+                    <div class="stat-content">
+                        <h3 id="valorMedio">R$ 0,00</h3>
+                        <p>Valor Médio por Equipamento</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔧</div>
+                    <div class="stat-content">
+                        <h3 id="custoManutencoes">R$ 0,00</h3>
+                        <p>Custo Total de Manutenções</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⌛</div>
+                    <div class="stat-content">
+                        <h3 id="manutencoesPendentes">0</h3>
+                        <p>Manutenções Pendentes</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-content">
+                        <h3 id="emprestimosRecentes">0</h3>
+                        <p>Empréstimos (Últimos 30 dias)</p>
                     </div>
                 </div>
                 <div class="stat-card" id="statNotificacoes" style="cursor:pointer;" onclick="mostrarNotificacoes()" title="Clique para ver detalhes">
@@ -83,6 +125,17 @@
                 <div class="chart-card">
                     <h3>Equipamentos por Tipo</h3>
                     <canvas id="tipoChart"></canvas>
+                </div>
+            </div>
+
+            <div class="charts-grid" style="margin-top: 20px;">
+                <div class="chart-card">
+                    <h3>Empréstimos Ativos por Departamento</h3>
+                    <canvas id="departamentoChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Top 5 Equipamentos Mais Emprestados</h3>
+                    <canvas id="popularesChart"></canvas>
                 </div>
             </div>
         </section>
