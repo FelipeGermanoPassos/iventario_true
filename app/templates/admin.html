@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 </head>
-<body>
+<body data-current-user-id="{{ current_user.id }}">
     <div class="container">
         <header>
             <h1>⚙️ Painel Administrativo</h1>
@@ -210,10 +210,6 @@
         <div id="mensagem" class="message-admin"></div>
     </div>
 
-    <script>
-        // ID do usuário atual (passado do backend)
-        const CURRENT_USER_ID = {{ current_user.id }};
-    </script>
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
 </body>

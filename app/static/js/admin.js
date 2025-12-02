@@ -1,3 +1,6 @@
+// ID do usuário atual (pegando do atributo data do body)
+const CURRENT_USER_ID = parseInt(document.body.dataset.currentUserId);
+
 // Variável global para armazenar usuários
 let todosUsuarios = [];
 let todosBackups = [];
