@@ -2004,6 +2004,8 @@ def whatsapp_config():
         try:
             new_config = request.get_json()
             
+            current_app.logger.info(f'Recebendo configurações: {new_config}')
+            
             # Valida dados
             if not new_config:
                 return jsonify({
@@ -2014,6 +2016,8 @@ def whatsapp_config():
             # Salva configurações
             success = ConfigManager.save_config(new_config)
             
+            current_app.logger.info(f'Resultado do salvamento: {success}')
+            
             if success:
                 return jsonify({
                     'success': True,
@@ -2022,11 +2026,13 @@ def whatsapp_config():
             else:
                 return jsonify({
                     'success': False,
-                    'message': 'Erro ao salvar configurações'
+                    'message': 'Erro ao salvar configurações no arquivo'
                 }), 500
                 
         except Exception as e:
-            current_app.logger.error(f'Erro ao salvar configurações: {str(e)}')
+            import traceback
+            error_details = traceback.format_exc()
+            current_app.logger.error(f'Erro ao salvar configurações WhatsApp: {str(e)}\n{error_details}')
             return jsonify({
                 'success': False,
                 'message': f'Erro ao salvar: {str(e)}'
