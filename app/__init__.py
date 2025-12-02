@@ -29,14 +29,26 @@ def create_app():
     
     # Configurações de E-mail
     # Carrega do arquivo .env se existir, senão usa variáveis de ambiente
-    from app.config_manager import EmailConfigManager
-    config_manager = EmailConfigManager()
-    
-    # Tenta carregar do .env primeiro
-    if config_manager.env_path.exists():
-        email_config = config_manager.load_config()
-        config_manager.apply_to_app(app, email_config)
-    else:
+    try:
+        from app.config_manager import EmailConfigManager
+        config_manager = EmailConfigManager()
+        
+        # Tenta carregar do .env primeiro
+        if config_manager.env_path.exists():
+            email_config = config_manager.load_config()
+            config_manager.apply_to_app(app, email_config)
+        else:
+            # Fallback para variáveis de ambiente
+            app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+            app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+            app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+            app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
+            app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
+            app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+            app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_USERNAME', ''))
+            app.config['MAIL_ENABLED'] = os.environ.get('MAIL_ENABLED', 'false').lower() == 'true'
+    except Exception as e:
+        app.logger.warning(f'Email config manager não disponível: {str(e)}. Usando variáveis de ambiente.')
         # Fallback para variáveis de ambiente
         app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
         app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
