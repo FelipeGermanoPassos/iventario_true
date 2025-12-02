@@ -388,7 +388,7 @@ O sistema é totalmente responsivo e funciona em:
 - 📱 Tablet
 - 📱 Smartphone
 
-## 🚀 Próximas Melhorias Sugeridas
+## 🚀 Melhorias Implementadas
 
 - [x] Autenticação de usuários
 - [x] Perfil de usuário com alteração de senha
@@ -402,6 +402,80 @@ O sistema é totalmente responsivo e funciona em:
 - [x] QR Code para identificação rápida
 - [x] Backup automático do banco de dados
 - [x] Dashboard com mais métricas (empréstimos por departamento, taxa de utilização, custos de manutenção, equipamentos populares)
+- [x] PWA (Progressive Web App) para instalação no Android
+- [x] UI com paleta de cores TrueSource (laranja #EF7D2D)
+
+## 💡 Sugestões para Evolução Futura
+
+### 🔔 Notificações e Comunicação
+- [ ] **Envio de e-mails automáticos**: Notificar responsáveis sobre devoluções próximas e atrasadas
+- [ ] **Sistema de lembretes**: Alertas personalizados para usuários (3 dias antes, 1 dia antes, no vencimento)
+- [ ] **Notificações push no PWA**: Alertas instantâneos no app mobile
+- [ ] **WhatsApp/SMS**: Integração para envio de lembretes via WhatsApp Business API
+
+### 📊 Análise e Inteligência
+- [ ] **Dashboard executivo**: Métricas gerenciais e KPIs (custo por departamento, ROI de equipamentos)
+- [ ] **Previsão de demanda**: IA para prever necessidades de compra baseado no histórico
+- [ ] **Análise de uso**: Identificar equipamentos subutilizados ou mais requisitados
+- [ ] **Relatórios agendados**: Envio automático de relatórios semanais/mensais por e-mail
+- [ ] **Comparativo temporal**: Gráficos de evolução (mês a mês, ano a ano)
+
+### 🔧 Gestão Avançada
+- [ ] **Garantias**: Controle de prazo de garantia com alertas de vencimento
+- [ ] **Depreciação**: Cálculo automático de depreciação de ativos
+- [ ] **Contratos de manutenção**: Gestão de contratos com fornecedores e prazos
+- [ ] **Agenda de manutenções preventivas**: Calendário com lembretes automáticos
+- [ ] **Histórico de incidentes**: Registrar problemas e soluções aplicadas
+- [ ] **Checklist de entrega/devolução**: Verificação de estado do equipamento
+
+### 👥 Colaboração e Workflow
+- [ ] **Sistema de solicitações**: Usuários podem solicitar equipamentos (workflow de aprovação)
+- [ ] **Fila de espera**: Reserva de equipamentos emprestados
+- [ ] **Avaliação pós-devolução**: Responsável avaliar estado do equipamento
+- [ ] **Comentários e tags**: Colaboração entre usuários sobre equipamentos
+- [ ] **Múltiplas localizações**: Gestão de equipamentos em diferentes prédios/cidades
+- [ ] **Transferência entre departamentos**: Workflow de transferência de responsabilidade
+
+### 🔒 Segurança e Auditoria
+- [ ] **Log de auditoria**: Registrar todas as ações dos usuários
+- [ ] **Autenticação em dois fatores (2FA)**: Maior segurança no acesso
+- [ ] **Níveis de permissão**: Roles customizados (visualizador, operador, gerente, admin)
+- [ ] **Backup em nuvem**: Integração com Google Drive, OneDrive ou S3
+- [ ] **Termos de uso**: Aceite digital do termo de responsabilidade no empréstimo
+- [ ] **Assinatura digital**: Registrar assinatura do responsável na retirada
+
+### 📱 Mobile e Integração
+- [ ] **App nativo**: Versão iOS (Swift) e Android (Kotlin)
+- [ ] **Leitor de QR Code integrado**: Scan direto pelo app para identificar equipamentos
+- [ ] **Modo offline**: Funcionalidade limitada sem internet
+- [ ] **API REST documentada**: Swagger/OpenAPI para integrações externas
+- [ ] **Integração com Active Directory/LDAP**: Autenticação corporativa
+- [ ] **Integração com sistemas ERP**: Sincronização com SAP, Totvs, etc.
+
+### 📦 Recursos de Estoque
+- [ ] **Controle de acessórios**: Gerenciar cabos, fontes, mouses junto com equipamentos
+- [ ] **Kits de equipamentos**: Agrupar itens (ex: notebook + mouse + case)
+- [ ] **Estoque mínimo**: Alertas quando quantidade disponível fica baixa
+- [ ] **Fornecedores**: Cadastro de fornecedores com histórico de compras
+- [ ] **Ordem de compra**: Gerar pedidos de compra para reposição
+- [ ] **Entrada/Saída física**: Controle de movimentação com código de barras
+
+### 🎨 Interface e UX
+- [ ] **Tema escuro**: Dark mode para conforto visual
+- [ ] **Idiomas**: Suporte multilíngue (PT, EN, ES)
+- [ ] **Personalização**: Usuário escolher cores, layout do dashboard
+- [ ] **Atalhos de teclado**: Navegação rápida (Ctrl+N para novo, etc.)
+- [ ] **Tutorial interativo**: Onboarding para novos usuários
+- [ ] **Modo kiosko**: Tela de autoatendimento para empréstimos
+
+### 📈 Otimização Técnica
+- [ ] **Cache Redis**: Melhorar performance em consultas frequentes
+- [ ] **PostgreSQL**: Migrar de SQLite para banco mais robusto
+- [ ] **Docker**: Containerização para fácil deploy
+- [ ] **CI/CD**: Pipeline automatizado (GitHub Actions, GitLab CI)
+- [ ] **Testes automatizados**: Unitários, integração e E2E
+- [ ] **Monitoramento**: Integração com Sentry, New Relic ou DataDog
+- [ ] **CDN**: Servir assets estáticos via CDN para melhor performance
 
 ## 📝 Licença
 
