@@ -1,5 +1,30 @@
 // Variável global para armazenar usuários
 let todosUsuarios = [];
+let todosBackups = [];
+let tabAtual = 'usuarios';
+
+// Controle de tabs
+function mostrarTab(nomeTab) {
+    tabAtual = nomeTab;
+    
+    // Atualiza botões das tabs
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Atualiza conteúdo das tabs
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    if (nomeTab === 'usuarios') {
+        document.getElementById('tabUsuarios').classList.add('active');
+    } else if (nomeTab === 'backups') {
+        document.getElementById('tabBackups').classList.add('active');
+        carregarBackups();
+    }
+}
 
 // Carrega dados ao iniciar
 document.addEventListener('DOMContentLoaded', () => {
@@ -40,6 +65,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const telefoneInput = document.getElementById('usuarioTelefone');
     if (telefoneInput) {
         telefoneInput.addEventListener('input', aplicarMascaraTelefone);
+    }
+    
+    // Event listeners para backups
+    const btnCriarBackup = document.getElementById('btnCriarBackup');
+    if (btnCriarBackup) {
+        btnCriarBackup.addEventListener('click', criarBackupManual);
+    }
+    
+    const btnAtualizarBackups = document.getElementById('btnAtualizarBackups');
+    if (btnAtualizarBackups) {
+        btnAtualizarBackups.addEventListener('click', carregarBackups);
     }
     
     console.log('DOMContentLoaded - concluído');
@@ -402,4 +438,106 @@ function aplicarMascaraTelefone(e) {
     }
     
     e.target.value = valor;
+}
+
+// ===== FUNÇÕES DE BACKUP =====
+
+async function carregarBackups() {
+    try {
+        const response = await fetch('/admin/backup/listar');
+        const data = await response.json();
+        
+        if (data.success) {
+            todosBackups = data.backups;
+            renderizarBackups(todosBackups);
+        } else {
+            mostrarMensagem(data.message || 'Erro ao carregar backups', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar backups:', error);
+        mostrarMensagem('Erro ao carregar backups', 'error');
+    }
+}
+
+function renderizarBackups(backups) {
+    const tbody = document.getElementById('backupsTableBody');
+    
+    if (backups.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Nenhum backup encontrado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = backups.map(backup => `
+        <tr>
+            <td><code>${backup.nome}</code></td>
+            <td><span class="badge ${backup.tipo === 'Manual' ? 'badge-primary' : 'badge-secondary'}">${backup.tipo}</span></td>
+            <td>${backup.tamanho}</td>
+            <td>${backup.data}</td>
+            <td>
+                <div class="action-buttons">
+                    <button onclick="baixarBackup('${backup.nome}')" class="btn btn-sm" title="Baixar">
+                        📥 Baixar
+                    </button>
+                    <button onclick="deletarBackup('${backup.nome}')" class="btn btn-sm btn-danger" title="Deletar">
+                        🗑️ Deletar
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function criarBackupManual() {
+    if (!confirm('Deseja criar um backup manual do banco de dados?')) return;
+    
+    try {
+        const btn = document.getElementById('btnCriarBackup');
+        btn.disabled = true;
+        btn.textContent = '⏳ Criando...';
+        
+        const response = await fetch('/admin/backup/criar', {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarMensagem('Backup criado com sucesso!', 'success');
+            carregarBackups(); // Recarrega a lista
+        } else {
+            mostrarMensagem(data.message || 'Erro ao criar backup', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao criar backup:', error);
+        mostrarMensagem('Erro ao criar backup', 'error');
+    } finally {
+        const btn = document.getElementById('btnCriarBackup');
+        btn.disabled = false;
+        btn.textContent = '📦 Criar Backup Manual';
+    }
+}
+
+function baixarBackup(nome) {
+    window.location.href = `/admin/backup/baixar/${nome}`;
+    mostrarMensagem('Download iniciado', 'success');
+}
+
+async function deletarBackup(nome) {
+    if (!confirm(`Deseja realmente deletar o backup:\n${nome}?`)) return;
+    
+    try {
+        const response = await fetch(`/admin/backup/deletar/${nome}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarMensagem('Backup deletado com sucesso!', 'success');
+            carregarBackups(); // Recarrega a lista
+        } else {
+            mostrarMensagem(data.message || 'Erro ao deletar backup', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao deletar backup:', error);
+        mostrarMensagem('Erro ao deletar backup', 'error');
+    }
 }

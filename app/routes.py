@@ -318,6 +318,189 @@ def editar_usuario(id):
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao atualizar usuário: {str(e)}'}), 400
 
+
+# ==================== ROTAS DE BACKUP ====================
+
+def realizar_backup_automatico(app):
+    """Função para realizar backup automático (chamada pelo scheduler)"""
+    with app.app_context():
+        try:
+            import shutil
+            from datetime import datetime
+            
+            # Caminho do banco de dados
+            db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'instance', 'inventario.db')
+            
+            # Pasta de backups
+            backup_folder = app.config['BACKUP_FOLDER']
+            
+            # Nome do arquivo de backup com timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_filename = f'backup_auto_{timestamp}.db'
+            backup_path = os.path.join(backup_folder, backup_filename)
+            
+            # Copia o arquivo do banco de dados
+            shutil.copy2(db_path, backup_path)
+            
+            # Remove backups antigos (mantém apenas os últimos 30 dias)
+            limpar_backups_antigos(backup_folder, dias=30)
+            
+            print(f'[BACKUP] Backup automático realizado com sucesso: {backup_filename}')
+            return True
+        except Exception as e:
+            print(f'[BACKUP] Erro ao realizar backup automático: {str(e)}')
+            return False
+
+def limpar_backups_antigos(backup_folder, dias=30):
+    """Remove backups mais antigos que X dias"""
+    try:
+        from datetime import datetime, timedelta
+        import glob
+        
+        # Data limite
+        data_limite = datetime.now() - timedelta(days=dias)
+        
+        # Lista todos os arquivos de backup
+        arquivos_backup = glob.glob(os.path.join(backup_folder, 'backup_*.db'))
+        
+        for arquivo in arquivos_backup:
+            # Obtém a data de modificação do arquivo
+            data_arquivo = datetime.fromtimestamp(os.path.getmtime(arquivo))
+            
+            # Remove se for mais antigo que a data limite
+            if data_arquivo < data_limite:
+                os.remove(arquivo)
+                print(f'[BACKUP] Backup antigo removido: {os.path.basename(arquivo)}')
+    except Exception as e:
+        print(f'[BACKUP] Erro ao limpar backups antigos: {str(e)}')
+
+@main.route('/admin/backup/criar', methods=['POST'])
+@login_required
+@admin_required
+def criar_backup_manual():
+    """Cria um backup manual do banco de dados"""
+    try:
+        import shutil
+        from datetime import datetime
+        
+        # Caminho do banco de dados
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'instance', 'inventario.db')
+        
+        # Pasta de backups
+        backup_folder = current_app.config['BACKUP_FOLDER']
+        
+        # Nome do arquivo de backup com timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_filename = f'backup_manual_{timestamp}.db'
+        backup_path = os.path.join(backup_folder, backup_filename)
+        
+        # Copia o arquivo do banco de dados
+        shutil.copy2(db_path, backup_path)
+        
+        # Obtém tamanho do arquivo
+        tamanho = os.path.getsize(backup_path)
+        tamanho_mb = tamanho / (1024 * 1024)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Backup criado com sucesso!',
+            'backup': {
+                'nome': backup_filename,
+                'tamanho': f'{tamanho_mb:.2f} MB',
+                'data': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao criar backup: {str(e)}'
+        }), 400
+
+@main.route('/admin/backup/listar')
+@login_required
+@admin_required
+def listar_backups():
+    """Lista todos os backups disponíveis"""
+    try:
+        import glob
+        from datetime import datetime
+        
+        backup_folder = current_app.config['BACKUP_FOLDER']
+        
+        # Lista todos os arquivos de backup
+        arquivos_backup = glob.glob(os.path.join(backup_folder, 'backup_*.db'))
+        
+        backups = []
+        for arquivo in sorted(arquivos_backup, reverse=True):
+            nome = os.path.basename(arquivo)
+            tamanho = os.path.getsize(arquivo)
+            tamanho_mb = tamanho / (1024 * 1024)
+            data_modificacao = datetime.fromtimestamp(os.path.getmtime(arquivo))
+            
+            backups.append({
+                'nome': nome,
+                'tamanho': f'{tamanho_mb:.2f} MB',
+                'data': data_modificacao.strftime('%d/%m/%Y %H:%M:%S'),
+                'timestamp': data_modificacao.timestamp(),
+                'tipo': 'Manual' if 'manual' in nome else 'Automático'
+            })
+        
+        return jsonify({
+            'success': True,
+            'backups': backups
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao listar backups: {str(e)}'
+        }), 400
+
+@main.route('/admin/backup/baixar/<nome>')
+@login_required
+@admin_required
+def baixar_backup(nome):
+    """Baixa um arquivo de backup"""
+    try:
+        backup_folder = current_app.config['BACKUP_FOLDER']
+        return send_from_directory(backup_folder, nome, as_attachment=True)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao baixar backup: {str(e)}'
+        }), 400
+
+@main.route('/admin/backup/deletar/<nome>', methods=['DELETE'])
+@login_required
+@admin_required
+def deletar_backup(nome):
+    """Deleta um arquivo de backup"""
+    try:
+        backup_folder = current_app.config['BACKUP_FOLDER']
+        backup_path = os.path.join(backup_folder, nome)
+        
+        # Verifica se o arquivo existe
+        if not os.path.exists(backup_path):
+            return jsonify({
+                'success': False,
+                'message': 'Backup não encontrado.'
+            }), 404
+        
+        # Remove o arquivo
+        os.remove(backup_path)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Backup deletado com sucesso!'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao deletar backup: {str(e)}'
+        }), 400
+
 # ==================== ROTAS PRINCIPAIS ====================
 
 @main.route('/')

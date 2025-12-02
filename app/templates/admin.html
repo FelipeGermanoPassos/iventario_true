@@ -53,17 +53,25 @@
                 </div>
             </section>
 
-            <!-- Lista de Usuários -->
-            <section class="usuarios-section">
-                <div class="section-header">
-                    <h2>👥 Gerenciar Usuários</h2>
-                    <div class="header-actions">
-                        <div class="search-box">
-                            <input type="text" id="searchUsuario" placeholder="🔍 Buscar usuário...">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-button active" onclick="mostrarTab('usuarios')">👥 Usuários</button>
+                <button class="tab-button" onclick="mostrarTab('backups')">💾 Backups</button>
+            </div>
+
+            <!-- Tab Usuários -->
+            <div id="tabUsuarios" class="tab-content active">
+                <!-- Lista de Usuários -->
+                <section class="usuarios-section">
+                    <div class="section-header">
+                        <h2>👥 Gerenciar Usuários</h2>
+                        <div class="header-actions">
+                            <div class="search-box">
+                                <input type="text" id="searchUsuario" placeholder="🔍 Buscar usuário...">
+                            </div>
+                            <button id="btnNovoUsuario" class="btn btn-primary">+ Novo Usuário</button>
                         </div>
-                        <button id="btnNovoUsuario" class="btn btn-primary">+ Novo Usuário</button>
                     </div>
-                </div>
 
                 <div class="usuarios-table-container">
                     <table class="usuarios-table">
@@ -85,6 +93,51 @@
                     </table>
                 </div>
             </section>
+            </div>
+
+            <!-- Tab Backups -->
+            <div id="tabBackups" class="tab-content">
+                <section class="backups-section">
+                    <div class="section-header">
+                        <h2>💾 Gerenciar Backups</h2>
+                        <div class="header-actions">
+                            <button id="btnCriarBackup" class="btn btn-primary">📦 Criar Backup Manual</button>
+                            <button id="btnAtualizarBackups" class="btn btn-secondary">🔄 Atualizar Lista</button>
+                        </div>
+                    </div>
+
+                    <div class="backup-info">
+                        <p><strong>ℹ️ Informações sobre Backups:</strong></p>
+                        <ul>
+                            <li>Backups automáticos são criados diariamente às 02:00</li>
+                            <li>Backups antigos com mais de 30 dias são removidos automaticamente</li>
+                            <li>Você pode criar backups manuais a qualquer momento</li>
+                            <li>Baixe os backups para armazenar em local seguro</li>
+                        </ul>
+                    </div>
+
+                    <div class="backups-table-container">
+                        <table class="backups-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome do Arquivo</th>
+                                    <th>Tipo</th>
+                                    <th>Tamanho</th>
+                                    <th>Data/Hora</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backupsTableBody">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 20px;">
+                                        Carregando backups...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </div>
 
         <!-- Modal de Adicionar/Editar Usuário -->

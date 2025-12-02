@@ -391,7 +391,7 @@ O sistema é totalmente responsivo e funciona em:
 - [x] Notificações de devolução próxima ao vencimento
 - [x] Alertas de empréstimos atrasados
 - [x] QR Code para identificação rápida
-- [ ] Backup automático do banco de dados
+- [x] Backup automático do banco de dados
 - [ ] Dashboard com mais métricas (empréstimos por departamento, etc.)
 
 ## 📝 Licença

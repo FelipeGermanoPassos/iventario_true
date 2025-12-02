@@ -268,6 +268,93 @@
     background-color: #fef3c7 !important;
 }
 
+/* Backups Section */
+.backups-section {
+    margin-top: 20px;
+}
+
+.backup-info {
+    background: #f0f9ff;
+    border-left: 4px solid var(--primary-color);
+    padding: 15px 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+}
+
+.backup-info p {
+    margin: 0 0 10px 0;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.backup-info ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--secondary-color);
+}
+
+.backup-info li {
+    margin: 5px 0;
+}
+
+.backups-table-container {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.backups-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.backups-table thead {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
+    color: white;
+}
+
+.backups-table th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.backups-table td {
+    padding: 15px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.backups-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.backups-table code {
+    background: #f3f4f6;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #374151;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.badge-primary {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-secondary {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
 .data-text {
     font-size: 0.9rem;
     color: var(--secondary-color);
