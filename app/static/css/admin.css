@@ -577,9 +577,12 @@
 /* Seção de E-mail e WhatsApp */
 .email-section, .whatsapp-section {
     padding: 20px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
 }
 
-.email-config-container {
+.email-config-container, .whatsapp-config-container {
     display: flex;
     flex-direction: column;
     gap: 20px;

@@ -95,6 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btnTestarEmail.addEventListener('click', testarEmail);
     }
     
+    const btnTestarWhatsApp = document.getElementById('btnTestarWhatsApp');
+    if (btnTestarWhatsApp) {
+        btnTestarWhatsApp.addEventListener('click', testarWhatsApp);
+    }
+    
     // Configurar busca de usuários
     configurarBuscaUsuarios();
     
@@ -728,11 +733,3 @@ async function testarWhatsApp() {
         btn.textContent = '💬 Enviar Mensagem de Teste';
     }
 }
-
-// Event listener para WhatsApp
-document.addEventListener('DOMContentLoaded', () => {
-    const btnTestarWhatsApp = document.getElementById('btnTestarWhatsApp');
-    if (btnTestarWhatsApp) {
-        btnTestarWhatsApp.addEventListener('click', testarWhatsApp);
-    }
-});
