@@ -20,6 +20,7 @@ def verificar_e_enviar_notificacoes(app):
         from app.models import Emprestimo, Usuario, db
         from app.push_service import PushNotificationService
         from app.whatsapp_service import WhatsAppService
+        from app.telegram_service import TelegramService
         
         if not app.config.get('MAIL_ENABLED'):
             logger.info('Sistema de e-mail desabilitado. Configure MAIL_ENABLED=true para habilitar.')
@@ -32,6 +33,7 @@ def verificar_e_enviar_notificacoes(app):
         emails_enviados = 0
         push_enviadas = 0
         whatsapp_enviados = 0
+        telegram_enviados = 0
         
         for emprestimo in emprestimos_ativos:
             # Calcular dias até devolução
@@ -62,6 +64,10 @@ def verificar_e_enviar_notificacoes(app):
                     # Enviar WhatsApp
                     if WhatsAppService.send_overdue_alert(emprestimo, dias_atraso):
                         whatsapp_enviados += 1
+                    
+                    # Enviar Telegram
+                    if TelegramService.send_overdue_alert(emprestimo, dias_atraso):
+                        telegram_enviados += 1
                 
                 # Devolução próxima (3 dias antes)
                 elif dias_ate_devolucao <= 3 and dias_ate_devolucao > 0:
@@ -85,8 +91,12 @@ def verificar_e_enviar_notificacoes(app):
                     # Enviar WhatsApp
                     if WhatsAppService.send_reminder(emprestimo, dias_ate_devolucao):
                         whatsapp_enviados += 1
+                    
+                    # Enviar Telegram
+                    if TelegramService.send_reminder(emprestimo, dias_ate_devolucao):
+                        telegram_enviados += 1
         
-        logger.info(f'Verificação de notificações concluída. {emails_enviados} e-mails, {push_enviadas} push notifications e {whatsapp_enviados} WhatsApps enviados.')
+        logger.info(f'Verificação de notificações concluída. {emails_enviados} e-mails, {push_enviadas} push notifications, {whatsapp_enviados} WhatsApps e {telegram_enviados} Telegram enviados.')
 
 
 def enviar_email_lembrete(app, emprestimo, dias_restantes):
@@ -257,6 +267,10 @@ def enviar_email_confirmacao_emprestimo(app, emprestimo):
     # Enviar WhatsApp
     WhatsAppService.send_loan_confirmation(emprestimo)
     
+    # Enviar Telegram
+    from app.telegram_service import TelegramService
+    TelegramService.send_loan_confirmation(emprestimo)
+    
     # Enviar e-mail
     if not app.config.get('MAIL_ENABLED') or not emprestimo.email_responsavel:
         return
@@ -352,6 +366,10 @@ def enviar_email_confirmacao_devolucao(app, emprestimo):
     
     # Enviar WhatsApp
     WhatsAppService.send_return_confirmation(emprestimo)
+    
+    # Enviar Telegram
+    from app.telegram_service import TelegramService
+    TelegramService.send_return_confirmation(emprestimo)
     
     # Enviar e-mail
     if not app.config.get('MAIL_ENABLED') or not emprestimo.email_responsavel:

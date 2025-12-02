@@ -2056,3 +2056,152 @@ def whatsapp_config():
                 'success': False,
                 'message': f'Erro ao salvar: {str(e)}'
             }), 500
+
+
+# ========== ROTAS DE TELEGRAM ==========
+
+@main.route('/telegram/test', methods=['POST'])
+@login_required
+def test_telegram():
+    """Envia uma mensagem de teste via Telegram"""
+    try:
+        from app.telegram_service import TelegramService
+        
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        
+        current_app.logger.info(f'Teste Telegram - Chat ID: {chat_id}')
+        current_app.logger.info(f'Telegram Enabled: {TelegramService.is_enabled()}')
+        current_app.logger.info(f'Telegram Bot Token: {"✓" if TelegramService.get_bot_token() else "✗"}')
+        
+        if not chat_id:
+            return jsonify({
+                'success': False,
+                'message': 'Chat ID é obrigatório'
+            }), 400
+        
+        # Verifica se está habilitado
+        if not TelegramService.is_enabled():
+            return jsonify({
+                'success': False,
+                'message': 'Telegram não está habilitado. Configure e habilite na página de configuração.'
+            }), 400
+        
+        result = TelegramService.send_test_message(chat_id)
+        
+        current_app.logger.info(f'Resultado do teste: {result}')
+        
+        # Adiciona detalhes formatados na mensagem se houver
+        if not result['success'] and 'details' in result:
+            result['message'] = f"{result['message']}\n\n{result['details']}"
+        
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        current_app.logger.error(f'Erro ao enviar teste Telegram: {str(e)}\n{error_details}')
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao enviar teste: {str(e)}'
+        }), 500
+
+
+@main.route('/admin/telegram/status')
+@admin_required
+def telegram_status():
+    """Retorna o status da configuração do Telegram"""
+    try:
+        from app.telegram_service import TelegramService
+        
+        enabled = TelegramService.is_enabled()
+        bot_token = TelegramService.get_bot_token()
+        
+        # Tenta obter informações do bot
+        bot_info = None
+        if bot_token:
+            info_result = TelegramService.get_bot_info()
+            if info_result['success']:
+                bot_info = info_result['data']
+        
+        return jsonify({
+            'success': True,
+            'enabled': enabled,
+            'configured': bool(bot_token),
+            'bot_info': bot_info
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f'Erro ao verificar status Telegram: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao verificar status: {str(e)}'
+        }), 400
+
+
+@main.route('/admin/telegram-configuracao')
+@admin_required
+def telegram_configuracao():
+    """Página de configuração do Telegram"""
+    return render_template('telegram_config.html')
+
+
+@main.route('/admin/telegram-config', methods=['GET', 'POST'])
+@admin_required
+def telegram_config():
+    """Gerencia configurações do Telegram"""
+    from app.config_manager import ConfigManager
+    
+    if request.method == 'GET':
+        # Retorna configurações atuais
+        config = ConfigManager.get_config()
+        
+        # Filtra apenas as configurações do Telegram
+        telegram_config = {
+            'TELEGRAM_ENABLED': config.get('TELEGRAM_ENABLED', 'false'),
+            'TELEGRAM_BOT_TOKEN': config.get('TELEGRAM_BOT_TOKEN', '')
+        }
+        
+        return jsonify(telegram_config)
+    
+    elif request.method == 'POST':
+        # Salva novas configurações
+        try:
+            new_config = request.get_json()
+            
+            current_app.logger.info(f'Recebendo configurações Telegram: {new_config}')
+            
+            # Valida dados
+            if not new_config:
+                return jsonify({
+                    'success': False,
+                    'message': 'Dados de configuração não fornecidos'
+                }), 400
+            
+            # Salva configurações
+            success = ConfigManager.save_config(new_config)
+            
+            current_app.logger.info(f'Resultado do salvamento: {success}')
+            
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Configurações salvas com sucesso'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Erro ao salvar configurações no arquivo'
+                }), 500
+                
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            current_app.logger.error(f'Erro ao salvar configurações Telegram: {str(e)}\n{error_details}')
+            return jsonify({
+                'success': False,
+                'message': f'Erro ao salvar: {str(e)}'
+            }), 500

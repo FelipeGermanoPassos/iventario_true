@@ -245,7 +245,65 @@ $env:META_WHATSAPP_PHONE_ID="seu-phone-number-id"
 
 **Consulte o arquivo `whatsapp_config_example.txt` para instruções detalhadas de cada provedor.**
 
-### 8. Instalar no Android (PWA)
+### 8. Configurar notificações Telegram (Opcional)
+
+O sistema pode enviar mensagens instantâneas via **Telegram Bot** para notificações em tempo real:
+
+**Para habilitar:**
+
+1) **Crie um bot no Telegram:**
+   - Abra o Telegram e procure por `@BotFather`
+   - Envie o comando `/newbot`
+   - Escolha um nome e username para o bot
+   - Copie o **token** fornecido
+
+2) **Configure as variáveis de ambiente:**
+
+**Windows PowerShell:**
+```powershell
+$env:TELEGRAM_ENABLED="true"
+$env:TELEGRAM_BOT_TOKEN="seu-token-do-bot"
+python run.py
+```
+
+**Linux/Mac:**
+```bash
+export TELEGRAM_ENABLED=true
+export TELEGRAM_BOT_TOKEN=seu-token-do-bot
+python run.py
+```
+
+3) **Obtenha seu Chat ID:**
+   - No Telegram, procure por `@userinfobot`
+   - Envie qualquer mensagem para ele
+   - Ele responderá com seu Chat ID (ex: `123456789`)
+   - Ou inicie conversa com seu bot e use `/start`, depois acesse:
+     `https://api.telegram.org/bot<TOKEN>/getUpdates`
+
+4) **Cadastre o Chat ID:**
+   - Ao registrar empréstimo, preencha o campo "Chat ID Telegram"
+   - Use o número obtido na etapa anterior
+
+5) **Teste o envio:**
+   - Acesse o painel admin
+   - Clique na aba "Telegram"
+   - Digite seu Chat ID e clique em "🧪 Testar Telegram"
+
+6) **Tipos de mensagens enviadas:**
+   - ✅ Confirmação de empréstimos e devoluções
+   - ⏰ Lembretes 3 dias antes da devolução
+   - 🚨 Alertas de empréstimos atrasados
+
+7) **Vantagens do Telegram:**
+   - ✅ 100% gratuito, sem limites de mensagens
+   - ✅ Instantâneo, mais rápido que e-mail
+   - ✅ Multiplataforma (Android, iOS, Desktop, Web)
+   - ✅ Não precisa compartilhar número de telefone
+   - ✅ Suporte a formatação rica (negrito, itálico, emojis)
+
+**Consulte o arquivo `TELEGRAM_CONFIG.md` para instruções detalhadas e solução de problemas.**
+
+### 9. Instalar no Android (PWA)
 
 Para instalar o sistema como aplicativo no Android (PWA), é necessário acessar via HTTPS no celular.
 
@@ -567,7 +625,7 @@ O sistema é totalmente responsivo e funciona em:
 - [x] **Sistema de lembretes**: Alertas personalizados para usuários (3 dias antes, devoluções atrasadas) ✅
 - [x] **Notificações push no PWA**: Alertas instantâneos no app mobile ✅
 - [x] **WhatsApp/SMS**: Integração para envio de lembretes via WhatsApp Business API ✅
-- [ ] **Telegram Bot**: Integração com Telegram para notificações
+- [x] **Telegram Bot**: Integração com Telegram para notificações instantâneas ✅
 
 ### 📊 Análise e Inteligência
 - [ ] **Dashboard executivo**: Métricas gerenciais e KPIs (custo por departamento, ROI de equipamentos)

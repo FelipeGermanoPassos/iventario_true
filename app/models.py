@@ -115,6 +115,7 @@ class Emprestimo(db.Model):
     departamento = db.Column(db.String(100), nullable=False)
     email_responsavel = db.Column(db.String(100))
     telefone_responsavel = db.Column(db.String(20))
+    telegram_chat_id = db.Column(db.String(50))
     data_emprestimo = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     data_devolucao_prevista = db.Column(db.Date)
     data_devolucao_real = db.Column(db.DateTime)
@@ -146,6 +147,7 @@ class Emprestimo(db.Model):
             'departamento': self.departamento,
             'email_responsavel': self.email_responsavel,
             'telefone_responsavel': self.telefone_responsavel,
+            'telegram_chat_id': self.telegram_chat_id,
             'data_emprestimo': self.data_emprestimo.strftime('%Y-%m-%d %H:%M:%S'),
             'data_devolucao_prevista': self.data_devolucao_prevista.strftime('%Y-%m-%d') if self.data_devolucao_prevista else None,
             'data_devolucao_real': self.data_devolucao_real.strftime('%Y-%m-%d %H:%M:%S') if self.data_devolucao_real else None,

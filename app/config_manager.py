@@ -38,7 +38,11 @@ class ConfigManager:
             'MESSAGEBIRD_API_KEY': '',
             'MESSAGEBIRD_CHANNEL_ID': '',
             'META_ACCESS_TOKEN': '',
-            'META_PHONE_NUMBER_ID': ''
+            'META_PHONE_NUMBER_ID': '',
+            
+            # Configurações de Telegram
+            'TELEGRAM_ENABLED': 'false',
+            'TELEGRAM_BOT_TOKEN': ''
         }
         
         if manager.env_path.exists():
@@ -115,6 +119,14 @@ MESSAGEBIRD_CHANNEL_ID={MESSAGEBIRD_CHANNEL_ID}
 # Credenciais Meta/Facebook
 META_ACCESS_TOKEN={META_ACCESS_TOKEN}
 META_PHONE_NUMBER_ID={META_PHONE_NUMBER_ID}
+
+# ====== CONFIGURAÇÃO DE TELEGRAM ======
+
+# Habilitar/Desabilitar envio via Telegram (true ou false)
+TELEGRAM_ENABLED={TELEGRAM_ENABLED}
+
+# Token do Bot Telegram (obtenha com @BotFather)
+TELEGRAM_BOT_TOKEN={TELEGRAM_BOT_TOKEN}
 """.format(**current_config)
         
         try:
