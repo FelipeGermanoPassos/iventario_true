@@ -1,0 +1,286 @@
+# Configuração do WhatsApp Business API
+
+Este arquivo contém exemplos de configuração para integração com WhatsApp Business API.
+
+## 📱 Provedores Suportados
+
+O sistema suporta três provedores principais:
+1. **Twilio** (Recomendado para Brasil)
+2. **MessageBird**
+3. **Meta (Facebook) WhatsApp Business API**
+
+## 🔧 Configuração por Provedor
+
+### 1. Twilio WhatsApp API
+
+**Vantagens:**
+- Fácil configuração
+- Suporte em português
+- Sandbox gratuito para testes
+- Preços competitivos no Brasil
+
+**Como configurar:**
+
+1. Crie uma conta em: https://www.twilio.com/try-twilio
+2. Acesse o Console → Messaging → Try it out → Send a WhatsApp message
+3. Configure o WhatsApp Sandbox seguindo as instruções
+4. Obtenha suas credenciais:
+   - Account SID
+   - Auth Token
+   - WhatsApp From Number (ex: +14155238886)
+
+**Variáveis de ambiente:**
+
+```bash
+# Windows PowerShell
+$env:WHATSAPP_ENABLED="true"
+$env:WHATSAPP_PROVIDER="twilio"
+$env:TWILIO_ACCOUNT_SID="seu-account-sid-aqui"
+$env:TWILIO_AUTH_TOKEN="seu-auth-token-aqui"
+$env:TWILIO_WHATSAPP_FROM="+14155238886"
+
+# Linux/Mac
+export WHATSAPP_ENABLED=true
+export WHATSAPP_PROVIDER=twilio
+export TWILIO_ACCOUNT_SID=seu-account-sid-aqui
+export TWILIO_AUTH_TOKEN=seu-auth-token-aqui
+export TWILIO_WHATSAPP_FROM=+14155238886
+```
+
+**Preços (aproximados):**
+- Conversações iniciadas pelo negócio: $0.005 - $0.068 por mensagem
+- Conversações iniciadas pelo usuário: gratuitas nas primeiras 24h
+
+---
+
+### 2. MessageBird
+
+**Vantagens:**
+- Cobertura global
+- API robusta
+- Documentação excelente
+
+**Como configurar:**
+
+1. Crie uma conta em: https://messagebird.com
+2. Acesse Dashboard → Channels → WhatsApp
+3. Configure um canal WhatsApp
+4. Obtenha:
+   - API Key
+   - Channel ID
+
+**Variáveis de ambiente:**
+
+```bash
+# Windows PowerShell
+$env:WHATSAPP_ENABLED="true"
+$env:WHATSAPP_PROVIDER="messagebird"
+$env:MESSAGEBIRD_API_KEY="sua-api-key-aqui"
+$env:MESSAGEBIRD_CHANNEL_ID="seu-channel-id-aqui"
+
+# Linux/Mac
+export WHATSAPP_ENABLED=true
+export WHATSAPP_PROVIDER=messagebird
+export MESSAGEBIRD_API_KEY=sua-api-key-aqui
+export MESSAGEBIRD_CHANNEL_ID=seu-channel-id-aqui
+```
+
+---
+
+### 3. Meta (Facebook) WhatsApp Business API
+
+**Vantagens:**
+- API oficial do WhatsApp
+- Sem intermediários
+- Mensagens gratuitas (até certo volume)
+
+**Como configurar:**
+
+1. Crie conta no Meta Business: https://business.facebook.com
+2. Acesse Meta for Developers: https://developers.facebook.com
+3. Crie um app de tipo "Business"
+4. Adicione o produto "WhatsApp"
+5. Configure o número de telefone
+6. Obtenha:
+   - Access Token
+   - Phone Number ID
+
+**Variáveis de ambiente:**
+
+```bash
+# Windows PowerShell
+$env:WHATSAPP_ENABLED="true"
+$env:WHATSAPP_PROVIDER="meta"
+$env:META_WHATSAPP_TOKEN="seu-access-token-aqui"
+$env:META_WHATSAPP_PHONE_ID="seu-phone-number-id-aqui"
+
+# Linux/Mac
+export WHATSAPP_ENABLED=true
+export WHATSAPP_PROVIDER=meta
+export META_WHATSAPP_TOKEN=seu-access-token-aqui
+export META_WHATSAPP_PHONE_ID=seu-phone-number-id-aqui
+```
+
+**Preços:**
+- Primeiras 1.000 conversas/mês: GRATUITAS
+- Após isso: a partir de $0.005 por conversa
+
+---
+
+## 📝 Arquivo .env (Recomendado)
+
+Crie ou edite o arquivo `.env` na raiz do projeto:
+
+```env
+# ===== WHATSAPP CONFIGURATION =====
+
+# Habilitar/Desabilitar WhatsApp
+WHATSAPP_ENABLED=true
+
+# Provedor: twilio, messagebird ou meta
+WHATSAPP_PROVIDER=twilio
+
+# ===== TWILIO =====
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_WHATSAPP_FROM=+14155238886
+
+# ===== MESSAGEBIRD =====
+# MESSAGEBIRD_API_KEY=seu-api-key-aqui
+# MESSAGEBIRD_CHANNEL_ID=seu-channel-id-aqui
+
+# ===== META (FACEBOOK) =====
+# META_WHATSAPP_TOKEN=seu-access-token-aqui
+# META_WHATSAPP_PHONE_ID=seu-phone-number-id-aqui
+```
+
+⚠️ **IMPORTANTE:** Adicione `.env` ao `.gitignore` para não expor suas credenciais!
+
+---
+
+## 🧪 Como Testar
+
+### Via código Python:
+
+```python
+from app.whatsapp_service import WhatsAppService
+
+# Enviar mensagem de teste
+result = WhatsAppService.send_test_message('+5511999999999')
+print(result)
+```
+
+### Via interface web:
+
+1. Acesse o painel admin
+2. Vá em "Configurações" → "WhatsApp"
+3. Preencha as credenciais
+4. Clique em "Testar Conexão"
+5. Digite um número de telefone
+6. Clique em "Enviar Teste"
+
+---
+
+## 📋 Formato de Números de Telefone
+
+O sistema aceita vários formatos e converte automaticamente:
+
+**Entrada aceita:**
+- `11999999999` → convertido para `+5511999999999`
+- `(11) 99999-9999` → convertido para `+5511999999999`
+- `+55 11 99999-9999` → convertido para `+5511999999999`
+- `+5511999999999` → usado diretamente
+
+**Regras:**
+- Código do país (Brasil): +55
+- DDD: 2 dígitos
+- Número: 9 dígitos para celular (inicia com 9)
+
+---
+
+## 🚀 Tipos de Notificações Enviadas
+
+O sistema envia automaticamente via WhatsApp:
+
+1. ✅ **Confirmação de empréstimo** (imediato)
+2. ✅ **Confirmação de devolução** (imediato)
+3. ⏰ **Lembrete de devolução** (3 dias antes)
+4. 🚨 **Alerta de atraso** (diariamente após vencimento)
+
+---
+
+## 💰 Comparativo de Custos
+
+| Provedor | Sandbox Grátis | Custo por Mensagem | Melhor Para |
+|----------|----------------|-------------------|-------------|
+| **Twilio** | ✅ Sim | $0.005 - $0.068 | Brasil, testes |
+| **MessageBird** | ⚠️ Limitado | $0.010 - $0.070 | Europa, global |
+| **Meta** | ✅ 1000/mês | $0.005 (após limite) | Alto volume |
+
+---
+
+## 🔒 Segurança
+
+- ✅ Credenciais armazenadas em variáveis de ambiente
+- ✅ Não compartilhe tokens/keys publicamente
+- ✅ Use `.env` e adicione ao `.gitignore`
+- ✅ Tokens com permissões mínimas necessárias
+- ✅ Rotação periódica de credenciais
+
+---
+
+## 🐛 Solução de Problemas
+
+### "WhatsApp desabilitado"
+**Solução:** Defina `WHATSAPP_ENABLED=true`
+
+### "Credenciais não configuradas"
+**Solução:** Verifique se todas as variáveis do provedor escolhido estão definidas
+
+### "Número de telefone inválido"
+**Solução:** Use formato internacional com código do país (+55)
+
+### "Erro 401 Unauthorized"
+**Solução:** Verifique se as credenciais estão corretas
+
+### "Erro 403 Forbidden"
+**Solução:** Verifique se o número está verificado no sandbox/produção
+
+### "Erro 429 Too Many Requests"
+**Solução:** Aguarde alguns minutos, você atingiu o limite de taxa
+
+---
+
+## 📚 Documentação Oficial
+
+- **Twilio:** https://www.twilio.com/docs/whatsapp
+- **MessageBird:** https://developers.messagebird.com/api/conversations/
+- **Meta:** https://developers.facebook.com/docs/whatsapp
+
+---
+
+## 💡 Dicas
+
+1. **Comece com Twilio Sandbox** para testes gratuitos
+2. **Use templates aprovados** pelo WhatsApp para mensagens de marketing
+3. **Mensagens transacionais** (como nosso sistema) têm menos restrições
+4. **Monitore custos** através do dashboard do provedor
+5. **Respeite opt-out** de usuários que não querem receber mensagens
+
+---
+
+## ✅ Checklist de Implementação
+
+- [ ] Criar conta no provedor escolhido
+- [ ] Obter credenciais (API keys, tokens)
+- [ ] Configurar variáveis de ambiente
+- [ ] Adicionar `.env` ao `.gitignore`
+- [ ] Testar envio de mensagem
+- [ ] Configurar número de telefone no perfil dos usuários
+- [ ] Verificar recebimento das notificações
+- [ ] Monitorar logs de envio
+- [ ] Documentar para equipe
+
+---
+
+**🎉 Pronto!** Seu sistema agora pode enviar lembretes via WhatsApp!

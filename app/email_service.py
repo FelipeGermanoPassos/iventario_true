@@ -13,12 +13,13 @@ logger = logging.getLogger(__name__)
 
 def verificar_e_enviar_notificacoes(app):
     """
-    Verifica empréstimos e envia notificações por e-mail e push.
+    Verifica empréstimos e envia notificações por e-mail, push e WhatsApp.
     Chamado diariamente pelo scheduler.
     """
     with app.app_context():
         from app.models import Emprestimo, Usuario, db
         from app.push_service import PushNotificationService
+        from app.whatsapp_service import WhatsAppService
         
         if not app.config.get('MAIL_ENABLED'):
             logger.info('Sistema de e-mail desabilitado. Configure MAIL_ENABLED=true para habilitar.')
@@ -30,6 +31,7 @@ def verificar_e_enviar_notificacoes(app):
         
         emails_enviados = 0
         push_enviadas = 0
+        whatsapp_enviados = 0
         
         for emprestimo in emprestimos_ativos:
             # Calcular dias até devolução
@@ -56,6 +58,10 @@ def verificar_e_enviar_notificacoes(app):
                             tag=f'atraso-{emprestimo.id}'
                         )
                         push_enviadas += count
+                    
+                    # Enviar WhatsApp
+                    if WhatsAppService.send_overdue_alert(emprestimo, dias_atraso):
+                        whatsapp_enviados += 1
                 
                 # Devolução próxima (3 dias antes)
                 elif dias_ate_devolucao <= 3 and dias_ate_devolucao > 0:
@@ -75,8 +81,12 @@ def verificar_e_enviar_notificacoes(app):
                             tag=f'lembrete-{emprestimo.id}'
                         )
                         push_enviadas += count
+                    
+                    # Enviar WhatsApp
+                    if WhatsAppService.send_reminder(emprestimo, dias_ate_devolucao):
+                        whatsapp_enviados += 1
         
-        logger.info(f'Verificação de notificações concluída. {emails_enviados} e-mails e {push_enviadas} push notifications enviadas.')
+        logger.info(f'Verificação de notificações concluída. {emails_enviados} e-mails, {push_enviadas} push notifications e {whatsapp_enviados} WhatsApps enviados.')
 
 
 def enviar_email_lembrete(app, emprestimo, dias_restantes):
@@ -226,11 +236,12 @@ def enviar_email_atraso(app, emprestimo, dias_atraso):
 
 def enviar_email_confirmacao_emprestimo(app, emprestimo):
     """
-    Envia e-mail e push notification de confirmação quando um empréstimo é registrado.
+    Envia e-mail, push notification e WhatsApp de confirmação quando um empréstimo é registrado.
     """
     # Enviar push notification
     from app.models import Usuario
     from app.push_service import PushNotificationService
+    from app.whatsapp_service import WhatsAppService
     
     if emprestimo.email_responsavel:
         usuario = Usuario.query.filter_by(email=emprestimo.email_responsavel).first()
@@ -242,6 +253,9 @@ def enviar_email_confirmacao_emprestimo(app, emprestimo):
                 url='/',
                 tag=f'emprestimo-{emprestimo.id}'
             )
+    
+    # Enviar WhatsApp
+    WhatsAppService.send_loan_confirmation(emprestimo)
     
     # Enviar e-mail
     if not app.config.get('MAIL_ENABLED') or not emprestimo.email_responsavel:
@@ -318,11 +332,12 @@ def enviar_email_confirmacao_emprestimo(app, emprestimo):
 
 def enviar_email_confirmacao_devolucao(app, emprestimo):
     """
-    Envia e-mail e push notification de confirmação quando um equipamento é devolvido.
+    Envia e-mail, push notification e WhatsApp de confirmação quando um equipamento é devolvido.
     """
     # Enviar push notification
     from app.models import Usuario
     from app.push_service import PushNotificationService
+    from app.whatsapp_service import WhatsAppService
     
     if emprestimo.email_responsavel:
         usuario = Usuario.query.filter_by(email=emprestimo.email_responsavel).first()
@@ -334,6 +349,9 @@ def enviar_email_confirmacao_devolucao(app, emprestimo):
                 url='/',
                 tag=f'devolucao-{emprestimo.id}'
             )
+    
+    # Enviar WhatsApp
+    WhatsAppService.send_return_confirmation(emprestimo)
     
     # Enviar e-mail
     if not app.config.get('MAIL_ENABLED') or not emprestimo.email_responsavel:

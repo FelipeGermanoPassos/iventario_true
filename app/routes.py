@@ -1890,3 +1890,80 @@ def broadcast_push():
             'success': False,
             'message': f'Erro ao enviar notificação: {str(e)}'
         }), 400
+
+
+# ==================== ROTAS DE WHATSAPP ====================
+
+@main.route('/whatsapp/test', methods=['POST'])
+@login_required
+def test_whatsapp():
+    """Envia uma mensagem de teste via WhatsApp"""
+    try:
+        from app.whatsapp_service import WhatsAppService
+        
+        data = request.get_json()
+        phone = data.get('phone')
+        
+        if not phone:
+            return jsonify({
+                'success': False,
+                'message': 'Número de telefone é obrigatório'
+            }), 400
+        
+        result = WhatsAppService.send_test_message(phone)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        current_app.logger.error(f'Erro ao enviar teste WhatsApp: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao enviar teste: {str(e)}'
+        }), 400
+
+@main.route('/admin/whatsapp/status')
+@admin_required
+def whatsapp_status():
+    """Retorna o status da configuração do WhatsApp"""
+    try:
+        from app.whatsapp_service import WhatsAppService
+        
+        enabled = WhatsAppService.is_enabled()
+        provider = WhatsAppService.get_provider()
+        
+        # Verifica quais credenciais estão configuradas
+        credentials_ok = False
+        
+        if provider == 'twilio':
+            credentials_ok = bool(
+                os.environ.get('TWILIO_ACCOUNT_SID') and
+                os.environ.get('TWILIO_AUTH_TOKEN') and
+                os.environ.get('TWILIO_WHATSAPP_FROM')
+            )
+        elif provider == 'messagebird':
+            credentials_ok = bool(
+                os.environ.get('MESSAGEBIRD_API_KEY') and
+                os.environ.get('MESSAGEBIRD_CHANNEL_ID')
+            )
+        elif provider == 'meta':
+            credentials_ok = bool(
+                os.environ.get('META_WHATSAPP_TOKEN') and
+                os.environ.get('META_WHATSAPP_PHONE_ID')
+            )
+        
+        return jsonify({
+            'success': True,
+            'enabled': enabled,
+            'provider': provider,
+            'credentials_configured': credentials_ok
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f'Erro ao verificar status WhatsApp: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao verificar status: {str(e)}'
+        }), 400

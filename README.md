@@ -198,7 +198,54 @@ pip install pywebpush
 
 **Nota:** As notificações push funcionam mesmo com o app fechado no Android/iOS!
 
-### 7. Instalar no Android (PWA)
+### 7. Configurar notificações WhatsApp (Opcional)
+
+O sistema pode enviar lembretes via **WhatsApp Business API** para comunicação instantânea:
+
+**Para habilitar:**
+
+1) Escolha um provedor e configure as credenciais:
+
+**Opção 1: Twilio (Recomendado para Brasil)**
+```powershell
+$env:WHATSAPP_ENABLED="true"
+$env:WHATSAPP_PROVIDER="twilio"
+$env:TWILIO_ACCOUNT_SID="seu-account-sid"
+$env:TWILIO_AUTH_TOKEN="seu-auth-token"
+$env:TWILIO_WHATSAPP_FROM="+14155238886"
+```
+
+**Opção 2: MessageBird**
+```powershell
+$env:WHATSAPP_ENABLED="true"
+$env:WHATSAPP_PROVIDER="messagebird"
+$env:MESSAGEBIRD_API_KEY="sua-api-key"
+$env:MESSAGEBIRD_CHANNEL_ID="seu-channel-id"
+```
+
+**Opção 3: Meta (Facebook) WhatsApp Business API**
+```powershell
+$env:WHATSAPP_ENABLED="true"
+$env:WHATSAPP_PROVIDER="meta"
+$env:META_WHATSAPP_TOKEN="seu-access-token"
+$env:META_WHATSAPP_PHONE_ID="seu-phone-number-id"
+```
+
+2) **Cadastre números de telefone** nos perfis dos usuários (formato: +5511999999999)
+
+3) **Teste o envio:**
+   - Acesse o painel admin
+   - Clique em "Testar WhatsApp"
+   - Digite um número e envie mensagem de teste
+
+4) **Tipos de mensagens enviadas:**
+   - ✅ Confirmação de empréstimos e devoluções
+   - ⏰ Lembretes 3 dias antes da devolução
+   - 🚨 Alertas de empréstimos atrasados
+
+**Consulte o arquivo `whatsapp_config_example.txt` para instruções detalhadas de cada provedor.**
+
+### 8. Instalar no Android (PWA)
 
 Para instalar o sistema como aplicativo no Android (PWA), é necessário acessar via HTTPS no celular.
 
@@ -519,7 +566,8 @@ O sistema é totalmente responsivo e funciona em:
 - [x] **Envio de e-mails automáticos**: Notificar responsáveis sobre devoluções próximas e atrasadas ✅
 - [x] **Sistema de lembretes**: Alertas personalizados para usuários (3 dias antes, devoluções atrasadas) ✅
 - [x] **Notificações push no PWA**: Alertas instantâneos no app mobile ✅
-- [ ] **WhatsApp/SMS**: Integração para envio de lembretes via WhatsApp Business API
+- [x] **WhatsApp/SMS**: Integração para envio de lembretes via WhatsApp Business API ✅
+- [ ] **Telegram Bot**: Integração com Telegram para notificações
 
 ### 📊 Análise e Inteligência
 - [ ] **Dashboard executivo**: Métricas gerenciais e KPIs (custo por departamento, ROI de equipamentos)
