@@ -10,21 +10,30 @@ MAIL_ENABLED=true
 # Gmail: smtp.gmail.com
 # Outlook/Hotmail: smtp-mail.outlook.com
 # Yahoo: smtp.mail.yahoo.com
+# TrueBrands/Locaweb: smtp.truebrands.com.br ou smtp.hostgator.com.br
 MAIL_SERVER=smtp.gmail.com
 
-# Porta SMTP (geralmente 587 para TLS ou 465 para SSL)
-MAIL_PORT=587
+# Porta SMTP
+# 587 = TLS (recomendado)
+# 465 = SSL
+# 25 = Sem criptografia (não recomendado)
+MAIL_PORT=465
 
-# Usar TLS (true ou false)
-MAIL_USE_TLS=true
+# Usar TLS (true ou false) - para porta 587
+MAIL_USE_TLS=false
 
-# Usar SSL (true ou false) - geralmente false se MAIL_USE_TLS=true
-MAIL_USE_SSL=false
+# Usar SSL (true ou false) - para porta 465
+MAIL_USE_SSL=true
 
 # Seu e-mail (remetente)
 MAIL_USERNAME=noreply@truebrands.com.br
 
 # Senha do e-mail
+# ATENÇÃO: Se usar e-mail corporativo (@truebrands.com.br), você precisa:
+# 1. Descobrir o servidor SMTP da sua empresa (pergunte ao TI)
+# 2. Ajustar MAIL_SERVER para o servidor correto
+# 3. Verificar se a porta é 587 (TLS) ou 465 (SSL)
+#
 # IMPORTANTE: Para Gmail, use uma "Senha de App" e não sua senha normal
 # Como gerar senha de app no Gmail:
 # 1. Acesse https://myaccount.google.com/security

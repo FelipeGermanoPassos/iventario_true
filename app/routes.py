@@ -1601,3 +1601,93 @@ def testar_email():
             'success': False,
             'message': f'Erro ao enviar e-mail: {str(e)}'
         }), 400
+
+
+@main.route('/admin/email-configuracao')
+@login_required
+@admin_required
+def email_configuracao():
+    """Página de configuração de e-mail"""
+    return render_template('email_config.html')
+
+
+@main.route('/admin/email-config', methods=['GET'])
+@login_required
+@admin_required
+def get_email_config():
+    """Retorna a configuração atual de e-mail"""
+    try:
+        from app.config_manager import EmailConfigManager
+        manager = EmailConfigManager()
+        config = manager.load_config()
+        
+        return jsonify(config)
+    except Exception as e:
+        current_app.logger.error(f'Erro ao carregar configuração: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao carregar configuração: {str(e)}'
+        }), 400
+
+
+@main.route('/admin/email-config', methods=['POST'])
+@login_required
+@admin_required
+def save_email_config():
+    """Salva a configuração de e-mail no arquivo .env"""
+    try:
+        from app.config_manager import EmailConfigManager
+        
+        data = request.json
+        
+        # Valida os campos obrigatórios
+        if not data.get('MAIL_SERVER'):
+            return jsonify({
+                'success': False,
+                'message': 'Servidor SMTP é obrigatório'
+            }), 400
+        
+        if not data.get('MAIL_PORT'):
+            return jsonify({
+                'success': False,
+                'message': 'Porta SMTP é obrigatória'
+            }), 400
+        
+        if not data.get('MAIL_USERNAME'):
+            return jsonify({
+                'success': False,
+                'message': 'E-mail de remetente é obrigatório'
+            }), 400
+        
+        if not data.get('MAIL_PASSWORD'):
+            return jsonify({
+                'success': False,
+                'message': 'Senha é obrigatória'
+            }), 400
+        
+        # Salva a configuração no arquivo .env
+        manager = EmailConfigManager()
+        manager.save_config(data)
+        
+        # Aplica a configuração à aplicação atual (sem reiniciar)
+        manager.apply_to_app(current_app, data)
+        
+        # Reinicializa o Flask-Mail com as novas configurações
+        try:
+            from flask_mail import Mail
+            # Cria uma nova instância do Mail com a configuração atualizada
+            mail = Mail(current_app)
+        except Exception as mail_error:
+            current_app.logger.warning(f'Não foi possível reinicializar Flask-Mail: {str(mail_error)}')
+        
+        return jsonify({
+            'success': True,
+            'message': 'Configurações salvas com sucesso! Para garantir que todas as mudanças sejam aplicadas, reinicie o servidor.'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f'Erro ao salvar configuração: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao salvar configuração: {str(e)}'
+        }), 400

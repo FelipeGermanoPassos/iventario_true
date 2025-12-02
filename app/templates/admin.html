@@ -56,9 +56,9 @@
 
             <!-- Tabs -->
             <div class="tabs">
-                <button class="tab-button active" onclick="mostrarTab('usuarios')">👥 Usuários</button>
-                <button class="tab-button" onclick="mostrarTab('backups')">💾 Backups</button>
-                <button class="tab-button" onclick="mostrarTab('email')">📧 E-mail</button>
+                <button class="tab-button active" onclick="mostrarTab('usuarios', event)">👥 Usuários</button>
+                <button class="tab-button" onclick="mostrarTab('backups', event)">💾 Backups</button>
+                <button class="tab-button" onclick="mostrarTab('email', event)">📧 E-mail</button>
             </div>
 
             <!-- Tab Usuários -->
@@ -158,15 +158,22 @@
                         </div>
 
                         <div class="email-test-box">
-                            <h3>🧪 Testar Envio de E-mail</h3>
-                            <p>Envie um e-mail de teste para verificar se a configuração está funcionando:</p>
+                            <h3>⚙️ Configurar E-mail</h3>
+                            <p>Configure o servidor SMTP e teste o envio de e-mails:</p>
+                            
+                            <a href="{{ url_for('main.email_configuracao') }}" class="btn btn-primary btn-large">⚙️ Configurar Sistema de E-mail</a>
+                            
+                            <hr class="email-divider">
+                            
+                            <h3>🧪 Testar Envio Rápido</h3>
+                            <p>Envie um e-mail de teste usando a configuração atual:</p>
                             
                             <div class="form-group">
                                 <label for="emailTeste">E-mail de Destino:</label>
                                 <input type="email" id="emailTeste" placeholder="seu-email@exemplo.com" class="form-control">
                             </div>
                             
-                            <button id="btnTestarEmail" class="btn btn-primary">📧 Enviar E-mail de Teste</button>
+                            <button id="btnTestarEmail" class="btn btn-success">📧 Enviar E-mail de Teste</button>
                         </div>
 
                         <div class="email-info-box">
@@ -192,7 +199,7 @@ export MAIL_PASSWORD=sua-senha-de-app
 python run.py</code></pre>
 
                             <p><strong>⚠️ Importante para Gmail:</strong> Use uma "Senha de App" e não sua senha normal.</p>
-                            <p>Acesse <a href="https://myaccount.google.com/security" target="_blank">https://myaccount.google.com/security</a> e gere uma senha de app.</p>
+                            <p>Acesse <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">https://myaccount.google.com/security</a> e gere uma senha de app.</p>
                             
                             <h4>📧 Notificações Automáticas:</h4>
                             <ul>

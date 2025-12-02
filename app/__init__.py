@@ -13,16 +13,24 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Configurações de E-mail
-    # Para Gmail: use smtp.gmail.com, porta 587, e senha de app (não senha normal)
-    # Para Outlook: use smtp-mail.outlook.com, porta 587
-    app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-    app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-    app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
-    app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
-    app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')  # Seu email
-    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')  # Senha de app
-    app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', app.config['MAIL_USERNAME'])
-    app.config['MAIL_ENABLED'] = os.environ.get('MAIL_ENABLED', 'false').lower() == 'true'
+    # Carrega do arquivo .env se existir, senão usa variáveis de ambiente
+    from app.config_manager import EmailConfigManager
+    config_manager = EmailConfigManager()
+    
+    # Tenta carregar do .env primeiro
+    if config_manager.env_path.exists():
+        email_config = config_manager.load_config()
+        config_manager.apply_to_app(app, email_config)
+    else:
+        # Fallback para variáveis de ambiente
+        app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+        app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+        app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+        app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
+        app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
+        app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+        app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_USERNAME', ''))
+        app.config['MAIL_ENABLED'] = os.environ.get('MAIL_ENABLED', 'false').lower() == 'true'
     
     # Uploads de fotos (armazenadas em static/uploads/equipamentos)
     uploads_dir = os.path.join(os.path.dirname(__file__), 'static', 'uploads', 'equipamentos')

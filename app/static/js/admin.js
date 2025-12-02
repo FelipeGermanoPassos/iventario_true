@@ -5,14 +5,16 @@ let tabAtual = 'usuarios';
 let CURRENT_USER_ID; // Será inicializado no DOMContentLoaded
 
 // Controle de tabs
-function mostrarTab(nomeTab) {
+function mostrarTab(nomeTab, event) {
     tabAtual = nomeTab;
     
     // Atualiza botões das tabs
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
     
     // Atualiza conteúdo das tabs
     document.querySelectorAll('.tab-content').forEach(content => {
@@ -90,6 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btnTestarEmail.addEventListener('click', testarEmail);
     }
     
+    // Configurar busca de usuários
+    configurarBuscaUsuarios();
+    
     console.log('DOMContentLoaded - concluído');
 });
 
@@ -113,16 +118,26 @@ function limparMensagem() {
 // Carrega lista de usuários
 async function carregarUsuarios() {
     try {
+        console.log('Iniciando carregamento de usuários...');
         const response = await fetch('/admin/usuarios');
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Erro HTTP:', response.status, errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
         const usuarios = await response.json();
+        console.log('Usuários carregados:', usuarios.length);
         
         todosUsuarios = usuarios;
         atualizarEstatisticas(usuarios);
         renderizarUsuarios(usuarios);
         
     } catch (error) {
-        mostrarMensagem('Erro ao carregar usuários.', 'error');
-        console.error('Erro:', error);
+        mostrarMensagem('Erro ao carregar usuários: ' + error.message, 'error');
+        console.error('Erro detalhado:', error);
     }
 }
 
@@ -152,8 +167,8 @@ function renderizarUsuarios(usuarios) {
     usuarios.forEach(usuario => {
         const tr = document.createElement('tr');
         
-        // Destaca usuário atual
-        if (usuario.id === CURRENT_USER_ID) {
+        // Destaca usuário atual (verifica se CURRENT_USER_ID foi inicializado)
+        if (CURRENT_USER_ID && usuario.id === CURRENT_USER_ID) {
             tr.classList.add('usuario-atual');
         }
         
@@ -178,7 +193,7 @@ function renderizarUsuarios(usuarios) {
             <td class="data-text">${ultimoAcesso}</td>
             <td>
                 <div class="acoes-cell">
-                    ${usuario.id !== CURRENT_USER_ID ? `
+                    ${CURRENT_USER_ID && usuario.id !== CURRENT_USER_ID ? `
                         <button class="btn btn-sm btn-toggle-ativo" onclick="toggleAtivo(${usuario.id})" title="${usuario.ativo ? 'Desativar' : 'Ativar'}">
                             ${usuario.ativo ? '🚫' : '✅'}
                         </button>
@@ -191,7 +206,11 @@ function renderizarUsuarios(usuarios) {
                         <button class="btn btn-sm btn-delete" onclick="deletarUsuario(${usuario.id}, '${usuario.nome}')" title="Deletar">
                             🗑️
                         </button>
-                    ` : '<span style="color: #64748b;">Você</span>'}
+                    ` : CURRENT_USER_ID && usuario.id === CURRENT_USER_ID ? '<span style="color: #64748b;">Você</span>' : `
+                        <button class="btn btn-sm btn-primary" onclick="editarUsuario(${usuario.id})" title="Editar">
+                            ✏️
+                        </button>
+                    `}
                 </div>
             </td>
         `;
@@ -201,22 +220,27 @@ function renderizarUsuarios(usuarios) {
 }
 
 // Busca de usuários
-document.getElementById('searchUsuario').addEventListener('input', (e) => {
-    const termo = e.target.value.toLowerCase();
-    
-    if (!termo) {
-        renderizarUsuarios(todosUsuarios);
-        return;
+function configurarBuscaUsuarios() {
+    const searchInput = document.getElementById('searchUsuario');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const termo = e.target.value.toLowerCase();
+            
+            if (!termo) {
+                renderizarUsuarios(todosUsuarios);
+                return;
+            }
+            
+            const usuariosFiltrados = todosUsuarios.filter(usuario => 
+                usuario.nome.toLowerCase().includes(termo) ||
+                usuario.email.toLowerCase().includes(termo) ||
+                (usuario.departamento && usuario.departamento.toLowerCase().includes(termo))
+            );
+            
+            renderizarUsuarios(usuariosFiltrados);
+        });
     }
-    
-    const usuariosFiltrados = todosUsuarios.filter(usuario => 
-        usuario.nome.toLowerCase().includes(termo) ||
-        usuario.email.toLowerCase().includes(termo) ||
-        (usuario.departamento && usuario.departamento.toLowerCase().includes(termo))
-    );
-    
-    renderizarUsuarios(usuariosFiltrados);
-});
+}
 
 // Toggle ativo/inativo
 async function toggleAtivo(id) {

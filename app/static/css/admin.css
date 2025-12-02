@@ -667,6 +667,21 @@
     text-decoration: underline;
 }
 
+.email-divider {
+    margin: 20px 0;
+    border: none;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn-large {
+    padding: 14px 28px;
+    font-size: 1.05rem;
+    display: block;
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+}
+
 @media (max-width: 480px) {
     .stat-card-admin {
         flex-direction: column;

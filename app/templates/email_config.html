@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuração de E-mail - Sistema de Inventário</title>
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#EF7D2D">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <style>
+        .email-config-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .config-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .config-card h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-section {
+            margin-bottom: 25px;
+        }
+        
+        .form-section h3 {
+            color: #374151;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+        
+        .form-grid-2col {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .form-field {
+            margin-bottom: 15px;
+        }
+        
+        .form-field label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .form-field input,
+        .form-field select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-field input:focus,
+        .form-field select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .form-field small {
+            display: block;
+            margin-top: 5px;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .checkbox-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .checkbox-field input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .checkbox-field label {
+            margin: 0;
+            cursor: pointer;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .btn-large {
+            padding: 14px 28px;
+            font-size: 1.05rem;
+        }
+        
+        .info-banner {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .info-banner h4 {
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+        
+        .info-banner ul {
+            margin-left: 20px;
+            color: #1e3a8a;
+        }
+        
+        .warning-banner {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .warning-banner h4 {
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .status-enabled {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-disabled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .password-toggle {
+            position: relative;
+        }
+        
+        .password-toggle-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #6b7280;
+        }
+        
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-buttons .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📧 Configuração de E-mail</h1>
+            <div class="header-buttons">
+                <a href="{{ url_for('main.admin') }}" class="btn btn-secondary">← Voltar ao Admin</a>
+                <a href="{{ url_for('main.perfil') }}" class="user-name">👤 {{ current_user.nome }}</a>
+                <a href="{{ url_for('main.logout') }}" class="btn btn-logout">🚪 Sair</a>
+            </div>
+        </header>
+
+        <div class="email-config-page">
+            <!-- Status Atual -->
+            <div class="config-card">
+                <h2>📊 Status Atual</h2>
+                <div id="currentStatus">
+                    <p><strong>Sistema de E-mail:</strong> <span id="statusBadge" class="status-indicator status-disabled">❌ Desabilitado</span></p>
+                    <p id="configSummary" class="text-secondary">Carregando configurações...</p>
+                </div>
+            </div>
+
+            <!-- Formulário de Configuração -->
+            <div class="config-card">
+                <h2>⚙️ Configurações SMTP</h2>
+                
+                <div class="info-banner">
+                    <h4>ℹ️ Informação</h4>
+                    <p>Configure o servidor SMTP para enviar notificações automáticas por e-mail.</p>
+                </div>
+
+                <form id="formEmailConfig">
+                    <div class="checkbox-field">
+                        <input type="checkbox" id="mailEnabled" name="mailEnabled">
+                        <label for="mailEnabled"><strong>Habilitar envio de e-mails</strong></label>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Servidor SMTP</h3>
+                        <div class="form-grid-2col">
+                            <div class="form-field">
+                                <label for="mailServer">Servidor SMTP *</label>
+                                <select id="mailServer" name="mailServer" required>
+                                    <option value="smtp.gmail.com">Gmail (smtp.gmail.com)</option>
+                                    <option value="smtp-mail.outlook.com">Outlook (smtp-mail.outlook.com)</option>
+                                    <option value="smtp.mail.yahoo.com">Yahoo (smtp.mail.yahoo.com)</option>
+                                    <option value="custom">Outro (personalizado)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-field" id="customServerField" style="display: none;">
+                                <label for="customServer">Servidor Personalizado *</label>
+                                <input type="text" id="customServer" name="customServer" placeholder="smtp.seudominio.com">
+                            </div>
+
+                            <div class="form-field">
+                                <label for="mailPort">Porta SMTP *</label>
+                                <input type="number" id="mailPort" name="mailPort" value="587" required>
+                                <small>Geralmente 587 (TLS) ou 465 (SSL)</small>
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2col">
+                            <div class="checkbox-field">
+                                <input type="checkbox" id="mailUseTLS" name="mailUseTLS" checked>
+                                <label for="mailUseTLS">Usar TLS</label>
+                            </div>
+
+                            <div class="checkbox-field">
+                                <input type="checkbox" id="mailUseSSL" name="mailUseSSL">
+                                <label for="mailUseSSL">Usar SSL</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Credenciais</h3>
+                        
+                        <div class="warning-banner">
+                            <h4>⚠️ Importante para Gmail</h4>
+                            <p>Você deve usar uma <strong>Senha de App</strong> e não sua senha normal do Gmail.</p>
+                            <p><a href="https://myaccount.google.com/security" target="_blank" rel="noopener">Clique aqui para gerar uma senha de app →</a></p>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="mailUsername">E-mail (Remetente) *</label>
+                            <input type="email" id="mailUsername" name="mailUsername" placeholder="seu-email@gmail.com" required>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="mailPassword">Senha / Senha de App *</label>
+                            <div class="password-toggle">
+                                <input type="password" id="mailPassword" name="mailPassword" placeholder="••••••••••••••••" required>
+                                <button type="button" class="password-toggle-btn" onclick="togglePassword()">👁️</button>
+                            </div>
+                            <small>Nunca compartilhe sua senha</small>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="mailDefaultSender">E-mail Padrão do Remetente</label>
+                            <input type="email" id="mailDefaultSender" name="mailDefaultSender" placeholder="noreply@exemplo.com">
+                            <small>Se vazio, usa o e-mail de remetente acima</small>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary btn-large">💾 Salvar Configurações</button>
+                        <button type="button" class="btn btn-success btn-large" onclick="testarConfiguracao()">🧪 Testar E-mail</button>
+                        <button type="button" class="btn btn-secondary" onclick="carregarConfiguracoes()">🔄 Recarregar</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Informações Adicionais -->
+            <div class="config-card">
+                <h2>📋 Recursos de Notificação</h2>
+                <p>Com o sistema de e-mail habilitado, os seguintes recursos estarão disponíveis:</p>
+                <ul style="margin-left: 20px; margin-top: 15px; color: #4a5568;">
+                    <li>✅ Confirmação automática ao registrar empréstimos</li>
+                    <li>✅ Confirmação automática ao devolver equipamentos</li>
+                    <li>⏰ Lembretes 3 dias antes da devolução prevista</li>
+                    <li>🚨 Alertas automáticos de empréstimos atrasados</li>
+                </ul>
+                <p style="margin-top: 15px; color: #6b7280;"><strong>Verificação:</strong> Diariamente às 09:00</p>
+            </div>
+        </div>
+
+        <!-- Mensagens de feedback -->
+        <div id="mensagem" class="message-admin"></div>
+    </div>
+
+    <script>
+        // Carrega configurações ao iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarConfiguracoes();
+            
+            // Event listener para mudança de servidor
+            document.getElementById('mailServer').addEventListener('change', (e) => {
+                const customField = document.getElementById('customServerField');
+                if (e.target.value === 'custom') {
+                    customField.style.display = 'block';
+                    document.getElementById('customServer').required = true;
+                } else {
+                    customField.style.display = 'none';
+                    document.getElementById('customServer').required = false;
+                }
+            });
+            
+            // Submit do formulário
+            document.getElementById('formEmailConfig').addEventListener('submit', salvarConfiguracoes);
+        });
+
+        async function carregarConfiguracoes() {
+            try {
+                const response = await fetch('/admin/email-config');
+                const config = await response.json();
+                
+                // Atualiza status
+                const statusBadge = document.getElementById('statusBadge');
+                const configSummary = document.getElementById('configSummary');
+                
+                if (config.MAIL_ENABLED === 'true') {
+                    statusBadge.textContent = '✅ Habilitado';
+                    statusBadge.className = 'status-indicator status-enabled';
+                    configSummary.innerHTML = `Servidor: <strong>${config.MAIL_SERVER}</strong> | Porta: <strong>${config.MAIL_PORT}</strong> | Remetente: <strong>${config.MAIL_USERNAME || '(não configurado)'}</strong>`;
+                } else {
+                    statusBadge.textContent = '❌ Desabilitado';
+                    statusBadge.className = 'status-indicator status-disabled';
+                    configSummary.textContent = 'Configure o servidor SMTP abaixo e habilite o envio de e-mails.';
+                }
+                
+                // Preenche formulário
+                document.getElementById('mailEnabled').checked = config.MAIL_ENABLED === 'true';
+                
+                const serverSelect = document.getElementById('mailServer');
+                const serverValue = config.MAIL_SERVER;
+                const predefinedServers = ['smtp.gmail.com', 'smtp-mail.outlook.com', 'smtp.mail.yahoo.com'];
+                
+                if (predefinedServers.includes(serverValue)) {
+                    serverSelect.value = serverValue;
+                } else if (serverValue) {
+                    serverSelect.value = 'custom';
+                    document.getElementById('customServerField').style.display = 'block';
+                    document.getElementById('customServer').value = serverValue;
+                    document.getElementById('customServer').required = true;
+                }
+                
+                document.getElementById('mailPort').value = config.MAIL_PORT || '587';
+                document.getElementById('mailUseTLS').checked = config.MAIL_USE_TLS === 'true';
+                document.getElementById('mailUseSSL').checked = config.MAIL_USE_SSL === 'true';
+                document.getElementById('mailUsername').value = config.MAIL_USERNAME || '';
+                document.getElementById('mailPassword').value = config.MAIL_PASSWORD || '';
+                document.getElementById('mailDefaultSender').value = config.MAIL_DEFAULT_SENDER || '';
+                
+            } catch (error) {
+                console.error('Erro ao carregar configurações:', error);
+                mostrarMensagem('Erro ao carregar configurações', 'error');
+            }
+        }
+
+        async function salvarConfiguracoes(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const serverSelect = document.getElementById('mailServer');
+            const mailServer = serverSelect.value === 'custom' 
+                ? document.getElementById('customServer').value 
+                : serverSelect.value;
+            
+            const config = {
+                MAIL_ENABLED: document.getElementById('mailEnabled').checked ? 'true' : 'false',
+                MAIL_SERVER: mailServer,
+                MAIL_PORT: document.getElementById('mailPort').value,
+                MAIL_USE_TLS: document.getElementById('mailUseTLS').checked ? 'true' : 'false',
+                MAIL_USE_SSL: document.getElementById('mailUseSSL').checked ? 'true' : 'false',
+                MAIL_USERNAME: document.getElementById('mailUsername').value,
+                MAIL_PASSWORD: document.getElementById('mailPassword').value,
+                MAIL_DEFAULT_SENDER: document.getElementById('mailDefaultSender').value
+            };
+            
+            try {
+                const response = await fetch('/admin/email-config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    mostrarMensagem('✅ Configurações salvas com sucesso! As mudanças entrarão em vigor na próxima reinicialização do servidor.', 'success');
+                    setTimeout(() => {
+                        carregarConfiguracoes();
+                    }, 1000);
+                } else {
+                    mostrarMensagem(data.message || 'Erro ao salvar configurações', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao salvar configurações:', error);
+                mostrarMensagem('Erro ao salvar configurações', 'error');
+            }
+        }
+
+        async function testarConfiguracao() {
+            const email = document.getElementById('mailUsername').value;
+            
+            if (!email) {
+                mostrarMensagem('Por favor, preencha o e-mail de remetente antes de testar', 'error');
+                return;
+            }
+            
+            const emailTeste = prompt('Digite o e-mail para onde deseja enviar o teste:', email);
+            
+            if (!emailTeste) return;
+            
+            try {
+                const response = await fetch('/admin/testar-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: emailTeste })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    mostrarMensagem(`✅ ${data.message}`, 'success');
+                } else {
+                    mostrarMensagem(`❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao testar e-mail:', error);
+                mostrarMensagem('Erro ao enviar e-mail de teste. Verifique as configurações.', 'error');
+            }
+        }
+
+        function togglePassword() {
+            const passwordInput = document.getElementById('mailPassword');
+            const btn = event.target;
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                btn.textContent = '👁️';
+            }
+        }
+
+        function mostrarMensagem(texto, tipo = 'info') {
+            const mensagemDiv = document.getElementById('mensagem');
+            mensagemDiv.textContent = texto;
+            mensagemDiv.className = `message-admin ${tipo} show`;
+            
+            setTimeout(() => {
+                mensagemDiv.className = 'message-admin';
+                mensagemDiv.textContent = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
