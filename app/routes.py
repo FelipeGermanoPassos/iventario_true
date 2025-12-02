@@ -1735,7 +1735,8 @@ def dashboard_executivo_dados():
                 'top_10': top_roi,
                 'bottom_10': bottom_roi,
                 'roi_medio': round(sum([r['roi_percentual'] for r in roi_por_equipamento]) / len(roi_por_equipamento), 2) if roi_por_equipamento else 0
-            }
+            },
+            'analise_uso': analisar_uso_equipamentos(equipamentos, emprestimos)
         })
         
     except Exception as e:
@@ -1746,6 +1747,134 @@ def dashboard_executivo_dados():
             'success': False,
             'message': f'Erro ao gerar dados: {str(e)}'
         }), 400
+
+def analisar_uso_equipamentos(equipamentos, emprestimos):
+    """
+    Analisa o uso dos equipamentos para identificar os mais requisitados e subutilizados
+    
+    Args:
+        equipamentos: Lista de equipamentos
+        emprestimos: Lista de empréstimos
+        
+    Returns:
+        dict: Análise de uso com equipamentos mais requisitados e subutilizados
+    """
+    from datetime import datetime, timedelta
+    
+    analise_por_equipamento = []
+    hoje = datetime.now()
+    periodo_analise_dias = 365  # Último ano
+    
+    for eq in equipamentos:
+        # Buscar todos os empréstimos deste equipamento
+        emprestimos_eq = [e for e in emprestimos if e.equipamento_id == eq.id]
+        
+        # Total de empréstimos
+        total_emprestimos = len(emprestimos_eq)
+        
+        # Calcular dias totais que o equipamento ficou emprestado
+        dias_emprestado = 0
+        for emp in emprestimos_eq:
+            if emp.data_devolucao_real:
+                # Empréstimo devolvido
+                duracao = (emp.data_devolucao_real - emp.data_emprestimo).days
+            elif emp.status == 'Ativo':
+                # Empréstimo ainda ativo
+                duracao = (hoje - emp.data_emprestimo).days
+            else:
+                duracao = 0
+            
+            dias_emprestado += max(duracao, 0)
+        
+        # Taxa de ocupação (% do tempo que ficou emprestado)
+        # Considerar desde a data de cadastro ou último ano
+        if eq.data_cadastro:
+            dias_desde_cadastro = (hoje - eq.data_cadastro).days
+            dias_base = min(dias_desde_cadastro, periodo_analise_dias)
+        else:
+            dias_base = periodo_analise_dias
+        
+        if dias_base > 0:
+            taxa_ocupacao = (dias_emprestado / dias_base) * 100
+        else:
+            taxa_ocupacao = 0
+        
+        # Empréstimos nos últimos 90 dias
+        data_limite_recente = hoje - timedelta(days=90)
+        emprestimos_recentes = [e for e in emprestimos_eq if e.data_emprestimo >= data_limite_recente]
+        
+        # Classificação de uso
+        if taxa_ocupacao >= 60:
+            classificacao = 'alto'
+        elif taxa_ocupacao >= 30:
+            classificacao = 'medio'
+        else:
+            classificacao = 'baixo'
+        
+        # Recomendação para equipamentos subutilizados
+        recomendacao = ''
+        if classificacao == 'baixo':
+            if total_emprestimos == 0:
+                recomendacao = 'Nunca utilizado - considere venda ou realocação'
+            elif taxa_ocupacao < 10:
+                recomendacao = 'Uso muito baixo - avaliar necessidade'
+            else:
+                recomendacao = 'Baixa utilização - considere redistribuir'
+        elif classificacao == 'alto':
+            recomendacao = 'Alta demanda - considere adquirir similar'
+        
+        analise_por_equipamento.append({
+            'id': eq.id,
+            'nome': eq.nome,
+            'tipo': eq.tipo,
+            'marca': eq.marca,
+            'modelo': eq.modelo,
+            'status': eq.status,
+            'total_emprestimos': total_emprestimos,
+            'emprestimos_recentes': len(emprestimos_recentes),
+            'dias_emprestado': dias_emprestado,
+            'taxa_ocupacao': round(taxa_ocupacao, 1),
+            'classificacao': classificacao,
+            'recomendacao': recomendacao,
+            'valor': eq.valor or 0
+        })
+    
+    # Ordenar por taxa de ocupação
+    analise_por_equipamento.sort(key=lambda x: x['taxa_ocupacao'], reverse=True)
+    
+    # Top 10 mais requisitados
+    mais_requisitados = [eq for eq in analise_por_equipamento if eq['total_emprestimos'] > 0][:10]
+    
+    # Top 10 subutilizados (menor taxa de ocupação, mas cadastrados há pelo menos 30 dias)
+    subutilizados = [
+        eq for eq in analise_por_equipamento 
+        if eq['classificacao'] == 'baixo'
+    ][-10:]
+    subutilizados.reverse()  # Menor taxa primeiro
+    
+    # Estatísticas gerais
+    total_com_emprestimos = len([eq for eq in analise_por_equipamento if eq['total_emprestimos'] > 0])
+    total_nunca_usados = len([eq for eq in analise_por_equipamento if eq['total_emprestimos'] == 0])
+    taxa_ocupacao_media = sum([eq['taxa_ocupacao'] for eq in analise_por_equipamento]) / len(analise_por_equipamento) if analise_por_equipamento else 0
+    
+    # Equipamentos por classificação
+    por_classificacao = {
+        'alto': len([eq for eq in analise_por_equipamento if eq['classificacao'] == 'alto']),
+        'medio': len([eq for eq in analise_por_equipamento if eq['classificacao'] == 'medio']),
+        'baixo': len([eq for eq in analise_por_equipamento if eq['classificacao'] == 'baixo'])
+    }
+    
+    return {
+        'mais_requisitados': mais_requisitados,
+        'subutilizados': subutilizados,
+        'estatisticas': {
+            'total_equipamentos': len(analise_por_equipamento),
+            'total_com_emprestimos': total_com_emprestimos,
+            'total_nunca_usados': total_nunca_usados,
+            'taxa_ocupacao_media': round(taxa_ocupacao_media, 1),
+            'por_classificacao': por_classificacao
+        }
+    }
 
 # ====== ROTAS DE PREVISÃO DE DEMANDA (IA) ======
 

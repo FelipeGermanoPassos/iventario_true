@@ -41,6 +41,7 @@ function atualizarDashboard(data) {
     atualizarKPIs(data);
     atualizarGraficos(data);
     atualizarTabelas(data);
+    atualizarAnaliseUso(data);
     gerarInsights(data);
 }
 
@@ -455,4 +456,254 @@ function atualizarUltimaAtualizacao() {
 
 function mostrarErro(mensagem) {
     alert(mensagem);
+}
+
+// ========== ANÁLISE DE USO DE EQUIPAMENTOS ==========
+
+let chartMaisRequisitados = null;
+let chartSubutilizados = null;
+
+function atualizarAnaliseUso(data) {
+    if (!data || !data.analise_uso) return;
+    
+    const analise = data.analise_uso;
+    
+    // Atualizar tabelas
+    atualizarTabelaMaisRequisitados(analise.mais_requisitados);
+    atualizarTabelaSubutilizados(analise.subutilizados);
+    
+    // Atualizar gráficos
+    criarGraficoMaisRequisitados(analise.mais_requisitados);
+    criarGraficoSubutilizados(analise.subutilizados);
+    
+    // Adicionar insights de análise de uso
+    adicionarInsightsAnaliseUso(analise);
+}
+
+function atualizarTabelaMaisRequisitados(equipamentos) {
+    const tbody = document.querySelector('#tabelaMaisRequisitados tbody');
+    
+    if (!equipamentos || equipamentos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum equipamento com empréstimos registrados</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = equipamentos.map(eq => `
+        <tr>
+            <td><strong>${eq.nome}</strong></td>
+            <td>${eq.tipo}</td>
+            <td class="text-center">${eq.total_emprestimos}</td>
+            <td class="text-center">${eq.dias_emprestado} dias</td>
+            <td class="text-center">
+                <span class="badge badge-${getClasseOcupacao(eq.taxa_ocupacao)}">
+                    ${eq.taxa_ocupacao}%
+                </span>
+            </td>
+            <td><span class="status-badge status-${eq.status.toLowerCase()}">${eq.status}</span></td>
+        </tr>
+    `).join('');
+}
+
+function atualizarTabelaSubutilizados(equipamentos) {
+    const tbody = document.querySelector('#tabelaSubutilizados tbody');
+    
+    if (!equipamentos || equipamentos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum equipamento subutilizado identificado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = equipamentos.map(eq => `
+        <tr>
+            <td><strong>${eq.nome}</strong></td>
+            <td>${eq.tipo}</td>
+            <td class="text-center">${eq.total_emprestimos}</td>
+            <td class="text-center">${eq.dias_emprestado} dias</td>
+            <td class="text-center">
+                <span class="badge badge-warning">
+                    ${eq.taxa_ocupacao}%
+                </span>
+            </td>
+            <td><small>${eq.recomendacao}</small></td>
+        </tr>
+    `).join('');
+}
+
+function criarGraficoMaisRequisitados(equipamentos) {
+    const canvas = document.getElementById('chartMaisRequisitados');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Destruir gráfico anterior
+    if (chartMaisRequisitados) {
+        chartMaisRequisitados.destroy();
+    }
+    
+    if (!equipamentos || equipamentos.length === 0) {
+        equipamentos = [{ nome: 'Sem dados', taxa_ocupacao: 0 }];
+    }
+    
+    chartMaisRequisitados = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: equipamentos.map(eq => eq.nome),
+            datasets: [{
+                label: 'Taxa de Ocupação (%)',
+                data: equipamentos.map(eq => eq.taxa_ocupacao),
+                backgroundColor: 'rgba(239, 125, 45, 0.7)',
+                borderColor: 'rgba(239, 125, 45, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const eq = equipamentos[context.dataIndex];
+                            return `Empréstimos: ${eq.total_emprestimos}\nDias emprestado: ${eq.dias_emprestado}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Taxa de Ocupação (%)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function criarGraficoSubutilizados(equipamentos) {
+    const canvas = document.getElementById('chartSubutilizados');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Destruir gráfico anterior
+    if (chartSubutilizados) {
+        chartSubutilizados.destroy();
+    }
+    
+    if (!equipamentos || equipamentos.length === 0) {
+        equipamentos = [{ nome: 'Sem dados', taxa_ocupacao: 0 }];
+    }
+    
+    chartSubutilizados = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: equipamentos.map(eq => eq.nome),
+            datasets: [{
+                label: 'Taxa de Ocupação (%)',
+                data: equipamentos.map(eq => eq.taxa_ocupacao),
+                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                borderColor: 'rgba(52, 152, 219, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const eq = equipamentos[context.dataIndex];
+                            return `Empréstimos: ${eq.total_emprestimos}\nRecomendação: ${eq.recomendacao}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Taxa de Ocupação (%)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function adicionarInsightsAnaliseUso(analise) {
+    const insights = [];
+    
+    const stats = analise.estatisticas;
+    
+    // Insight sobre equipamentos nunca usados
+    if (stats.total_nunca_usados > 0) {
+        insights.push({
+            icon: '⚠️',
+            title: 'Equipamentos Nunca Utilizados',
+            description: `${stats.total_nunca_usados} equipamento(s) nunca foram emprestados. Avalie a necessidade de mantê-los no inventário ou considere realocação.`
+        });
+    }
+    
+    // Insight sobre equipamentos com alta demanda
+    if (analise.mais_requisitados && analise.mais_requisitados.length > 0) {
+        const maisRequisitado = analise.mais_requisitados[0];
+        if (maisRequisitado.taxa_ocupacao > 70) {
+            insights.push({
+                icon: '🔥',
+                title: 'Alta Demanda Identificada',
+                description: `${maisRequisitado.nome} tem taxa de ocupação de ${maisRequisitado.taxa_ocupacao}%. Considere adquirir equipamentos similares para atender à demanda.`
+            });
+        }
+    }
+    
+    // Insight sobre subutilização
+    if (stats.por_classificacao.baixo > 0) {
+        const percentualBaixo = (stats.por_classificacao.baixo / stats.total_equipamentos * 100).toFixed(0);
+        insights.push({
+            icon: '📉',
+            title: 'Oportunidade de Otimização',
+            description: `${stats.por_classificacao.baixo} equipamento(s) (${percentualBaixo}%) estão subutilizados. Revise a alocação ou considere venda/realocação para otimizar investimentos.`
+        });
+    }
+    
+    // Insight sobre taxa média
+    if (stats.taxa_ocupacao_media < 40) {
+        insights.push({
+            icon: '📊',
+            title: 'Taxa de Ocupação Média Baixa',
+            description: `A taxa média de ocupação é de ${stats.taxa_ocupacao_media}%. Há oportunidade de melhor aproveitamento do inventário existente antes de novas aquisições.`
+        });
+    }
+    
+    // Adicionar insights ao container existente
+    if (insights.length > 0) {
+        const container = document.getElementById('insightsContainer');
+        const insightsHTML = insights.map(insight => `
+            <div class="insight-item">
+                <strong>${insight.icon} ${insight.title}</strong>
+                <p>${insight.description}</p>
+            </div>
+        `).join('');
+        
+        // Adicionar após insights existentes
+        container.innerHTML += insightsHTML;
+    }
+}
+
+function getClasseOcupacao(taxa) {
+    if (taxa >= 70) return 'success';
+    if (taxa >= 40) return 'warning';
+    return 'danger';
 }

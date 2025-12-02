@@ -186,6 +186,76 @@
                 </div>
             </div>
 
+            <!-- Análise de Uso -->
+            <div class="analise-uso-section">
+                <h2 class="section-title">📊 Análise de Uso de Equipamentos</h2>
+                
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <h3>🔥 Equipamentos Mais Requisitados</h3>
+                        <canvas id="chartMaisRequisitados"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>❄️ Equipamentos Subutilizados</h3>
+                        <canvas id="chartSubutilizados"></canvas>
+                    </div>
+                </div>
+
+                <div class="tables-row">
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3>⚡ Top 10 - Mais Requisitados</h3>
+                            <span class="table-subtitle">Maior demanda e taxa de utilização</span>
+                        </div>
+                        <div class="table-container">
+                            <table id="tabelaMaisRequisitados">
+                                <thead>
+                                    <tr>
+                                        <th>Equipamento</th>
+                                        <th>Tipo</th>
+                                        <th>Empréstimos (Total)</th>
+                                        <th>Dias Emprestado</th>
+                                        <th>Taxa Ocupação</th>
+                                        <th>Status Atual</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="6" class="text-center">Carregando dados...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3>😴 Top 10 - Subutilizados</h3>
+                            <span class="table-subtitle">Baixa demanda - considere realocação ou venda</span>
+                        </div>
+                        <div class="table-container">
+                            <table id="tabelaSubutilizados">
+                                <thead>
+                                    <tr>
+                                        <th>Equipamento</th>
+                                        <th>Tipo</th>
+                                        <th>Empréstimos (Total)</th>
+                                        <th>Dias Emprestado</th>
+                                        <th>Taxa Ocupação</th>
+                                        <th>Recomendação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="6" class="text-center">Carregando dados...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Insights e Recomendações -->
             <div class="insights-section">
                 <div class="insight-card">

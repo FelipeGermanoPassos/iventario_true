@@ -396,3 +396,86 @@ tbody tr:hover {
 .kpi-card:nth-child(2) .kpi-icon { color: var(--info-color); }
 .kpi-card:nth-child(3) .kpi-icon { color: var(--warning-color); }
 .kpi-card:nth-child(4) .kpi-icon { color: var(--primary-color); }
+
+/* ========== ANÁLISE DE USO ========== */
+
+.analise-uso-section {
+    margin-top: 3rem;
+}
+
+.section-title {
+    font-size: 1.8rem;
+    color: var(--text-dark);
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid var(--primary-color);
+}
+
+/* Badges de ocupação */
+.badge-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.badge-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.badge-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+/* Status badges */
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-estoque {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-emprestado {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-manutenção {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.status-inativo {
+    background-color: #f3f4f6;
+    color: #4b5563;
+}
+
+/* Responsividade para análise de uso */
+@media (max-width: 768px) {
+    .analise-uso-section .charts-row,
+    .analise-uso-section .tables-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+}
