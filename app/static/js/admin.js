@@ -845,6 +845,23 @@ async function testarTelegram() {
         return;
     }
     
+    // Validar se é um número (não permite @username)
+    if (chatId.startsWith('@')) {
+        mostrarMensagem('❌ Use o Chat ID numérico, não o username.\n\n' +
+                       '📱 Para descobrir seu Chat ID:\n' +
+                       '1. Abra o Telegram\n' +
+                       '2. Procure por @userinfobot\n' +
+                       '3. Envie qualquer mensagem\n' +
+                       '4. Copie o número que ele mostrar (ex: 123456789)', 'error');
+        return;
+    }
+    
+    if (!/^\d+$/.test(chatId)) {
+        mostrarMensagem('❌ Chat ID inválido. Use apenas números (ex: 123456789).\n\n' +
+                       '📱 Use @userinfobot no Telegram para descobrir seu Chat ID.', 'error');
+        return;
+    }
+    
     btn.disabled = true;
     btn.textContent = '📤 Enviando...';
     

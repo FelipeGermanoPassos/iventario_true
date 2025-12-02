@@ -127,7 +127,19 @@ class TelegramService:
                     error_description = error_json.get('description', error_msg)
                     
                     # Mensagens de erro específicas
-                    if 'bot was blocked' in error_description.lower():
+                    if "can't initiate conversation" in error_description.lower() or 'forbidden' in error_description.lower():
+                        error_description = (
+                            f"❌ Bot não pode iniciar conversa com o usuário.\n\n"
+                            "💡 Solução (OBRIGATÓRIA):\n"
+                            "1. Abra o Telegram\n"
+                            "2. Procure por @truebrands_inventario_bot\n"
+                            "3. Clique em 'INICIAR' ou envie /start\n"
+                            "4. Volte aqui e teste novamente\n\n"
+                            "⚠️ IMPORTANTE: O Telegram não permite que bots enviem\n"
+                            "mensagens para usuários que nunca iniciaram conversa\n"
+                            "com o bot (política anti-spam)."
+                        )
+                    elif 'bot was blocked' in error_description.lower():
                         error_description = (
                             f"❌ Bot foi bloqueado pelo usuário {formatted_chat_id}.\n\n"
                             "💡 Solução: O usuário precisa:\n"

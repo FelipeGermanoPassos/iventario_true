@@ -373,12 +373,18 @@ python run.py</code></pre>
                             <hr class="email-divider">
                             
                             <h3>🧪 Testar Envio</h3>
-                            <p>Envie uma mensagem de teste para verificar se o bot está funcionando:</p>
+                            
+                            <div class="alert-info" style="margin-bottom: 15px; padding: 12px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px;">
+                                <strong>⚠️ IMPORTANTE - SIGA ESTA ORDEM:</strong><br>
+                                <strong>1️⃣</strong> Inicie conversa com o bot: <strong><a href="https://t.me/truebrands_inventario_bot" target="_blank" style="color: #1976D2;">@truebrands_inventario_bot</a></strong> (clique em "Iniciar")<br>
+                                <strong>2️⃣</strong> Descubra seu Chat ID: envie mensagem para <strong><a href="https://t.me/userinfobot" target="_blank" style="color: #1976D2;">@userinfobot</a></strong><br>
+                                <strong>3️⃣</strong> Use o número numérico (ex: 123456789), não o username (@usuario)
+                            </div>
                             
                             <div class="form-group">
-                                <label for="telegramChatId">Chat ID do Telegram:</label>
-                                <input type="text" id="telegramChatId" placeholder="123456789 ou @username" class="form-control">
-                                <small>Use @userinfobot para descobrir seu Chat ID</small>
+                                <label for="telegramChatId">Chat ID (somente números):</label>
+                                <input type="text" id="telegramChatId" placeholder="123456789" pattern="[0-9]+" title="Digite apenas números" class="form-control">
+                                <small>Exemplo: 123456789 (não use @username)</small>
                             </div>
                             
                             <button id="btnTestarTelegram" class="btn btn-success">✈️ Enviar Mensagem de Teste</button>

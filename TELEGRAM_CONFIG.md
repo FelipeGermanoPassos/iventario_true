@@ -40,20 +40,51 @@ python run.py
 
 ### 3. Obter o Chat ID dos Usuários
 
-Cada usuário precisa descobrir seu **Chat ID** pessoal para receber notificações:
+⚠️ **IMPORTANTE - ORDEM OBRIGATÓRIA:**
 
-#### Método 1: Usar @userinfobot
+**🔴 PASSO 1 (OBRIGATÓRIO):** Inicie conversa com o bot primeiro!
+1. Procure por `@truebrands_inventario_bot` no Telegram
+2. **Clique em "Iniciar"** ou envie `/start`
+3. ⚠️ Isso é OBRIGATÓRIO - o Telegram não permite que bots enviem mensagens para quem nunca iniciou conversa (política anti-spam)
+
+**🔵 PASSO 2:** Descubra seu Chat ID:
+- ✅ Correto: `123456789` ou `987654321` (NÚMEROS)
+- ❌ Errado: `@Felipegerpassos` ou `@username`
+
+Cada usuário precisa descobrir seu **Chat ID numérico** para receber notificações:
+
+#### 🎯 Método 1: Usar @userinfobot (MAIS FÁCIL)
 1. No Telegram, procure por `@userinfobot`
-2. Envie qualquer mensagem para ele
-3. Ele responderá com seu Chat ID (ex: `123456789`)
+2. **Clique em "Iniciar"** ou envie qualquer mensagem
+3. Ele responderá instantaneamente com:
+   ```
+   Id: 123456789
+   First name: Seu Nome
+   Username: @seuusername
+   ```
+4. **COPIE APENAS O NÚMERO** após "Id:" (ex: `123456789`)
 
-#### Método 2: Usar seu próprio bot
-1. Inicie conversa com seu bot (ex: `@inventario_ti_bot`)
-2. Envie `/start` ou qualquer mensagem
-3. Acesse: `https://api.telegram.org/bot<SEU_TOKEN>/getUpdates`
-   - Substitua `<SEU_TOKEN>` pelo token do seu bot
-4. Procure por `"chat":{"id":123456789}` na resposta
-5. O número é seu Chat ID
+#### 🔧 Método 2: Usar seu próprio bot
+1. Primeiro, **inicie conversa com seu bot**:
+   - Procure por `@truebrands_inventario_bot` (seu bot)
+   - Clique em **"Iniciar"** ou envie `/start`
+   - **IMPORTANTE:** Envie qualquer mensagem para ativar o chat
+
+2. Acesse no navegador (substitua o token):
+   ```
+   https://api.telegram.org/bot8582112542:AAHyb8dNKC4N6Ae8m-iwahWObJDRuYKsByg/getUpdates
+   ```
+
+3. Procure no JSON retornado por:
+   ```json
+   "chat": {
+     "id": 123456789,
+     "first_name": "Seu Nome",
+     "username": "seuusername"
+   }
+   ```
+
+4. **COPIE APENAS O NÚMERO** do campo "id" (ex: `123456789`)
 
 ### 4. Cadastrar Chat ID no Sistema
 
