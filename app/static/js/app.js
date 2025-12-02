@@ -153,10 +153,67 @@ async function carregarDashboard() {
 
         // Criar gráficos
         criarGraficos(data);
+        
+        // Carregar notificações
+        await carregarNotificacoes();
     } catch (error) {
         console.error('Erro ao carregar dashboard:', error);
         mostrarAlerta('Erro ao carregar dashboard', 'error');
     }
+}
+
+async function carregarNotificacoes() {
+    try {
+        const res = await fetch('/emprestimos/notificacoes?dias=3');
+        const data = await res.json();
+        if (data.success) {
+            const total = data.total_notificacoes || 0;
+            const badge = document.getElementById('totalNotificacoes');
+            if (badge) badge.textContent = total;
+            const card = document.getElementById('statNotificacoes');
+            if (card) {
+                card.style.background = total > 0 ? '#fef3c7' : '';
+                card.style.borderLeft = total > 0 ? '4px solid #f59e0b' : '';
+            }
+            // Armazenar para mostrar detalhes
+            window.notificacoesData = data;
+        }
+    } catch (e) {
+        console.error('Erro ao carregar notificações:', e);
+    }
+}
+
+function mostrarNotificacoes() {
+    const data = window.notificacoesData;
+    if (!data || data.total_notificacoes === 0) {
+        mostrarAlerta('Nenhuma devolução pendente no momento! 🎉', 'success');
+        return;
+    }
+    let msg = '<div style="text-align:left;max-height:400px;overflow-y:auto;">';
+    if (data.atrasados && data.atrasados.length > 0) {
+        msg += '<h3 style="color:#dc2626;">⚠️ Empréstimos Atrasados (' + data.atrasados.length + ')</h3><ul>';
+        data.atrasados.forEach(e => {
+            const dias = Math.floor((new Date() - new Date(e.data_devolucao_prevista)) / 86400000);
+            msg += `<li><b>${e.equipamento_nome || 'Equipamento'}</b> - ${e.responsavel}<br>Venceu há ${dias} dia(s) (${new Date(e.data_devolucao_prevista).toLocaleDateString('pt-BR')})</li>`;
+        });
+        msg += '</ul>';
+    }
+    if (data.proximos_vencimento && data.proximos_vencimento.length > 0) {
+        msg += '<h3 style="color:#f59e0b;">🔔 Devoluções Próximas (' + data.proximos_vencimento.length + ')</h3><ul>';
+        data.proximos_vencimento.forEach(e => {
+            const dias = Math.ceil((new Date(e.data_devolucao_prevista) - new Date()) / 86400000);
+            msg += `<li><b>${e.equipamento_nome || 'Equipamento'}</b> - ${e.responsavel}<br>Vence em ${dias} dia(s) (${new Date(e.data_devolucao_prevista).toLocaleDateString('pt-BR')})</li>`;
+        });
+        msg += '</ul>';
+    }
+    msg += '</div>';
+    // Criar modal temporário
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'block';
+    modal.innerHTML = `<div class="modal-content" style="max-width:600px;"><span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span><h2>🔔 Notificações de Devolução</h2>${msg}<div style="text-align:center;margin-top:20px;"><button class="btn btn-primary" onclick="this.closest('.modal').remove();mostrarTab('emprestimos');">Ver Empréstimos</button></div></div>`;
+    document.body.appendChild(modal);
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
 
 function criarGraficos(data) {
@@ -584,21 +641,44 @@ function renderizarEmprestimos(lista) {
         return;
     }
 
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
     tbody.innerHTML = lista.map(emp => {
         const eq = emp.equipamento;
         const dataEmprestimo = new Date(emp.data_emprestimo).toLocaleDateString('pt-BR');
         const dataPrevista = emp.data_devolucao_prevista ? new Date(emp.data_devolucao_prevista).toLocaleDateString('pt-BR') : '-';
         
+        // Verificar se está atrasado ou próximo ao vencimento
+        let rowClass = '';
+        let statusBadge = 'status-ativo';
+        let statusText = 'Ativo';
+        let alertIcon = '';
+        if (emp.data_devolucao_prevista) {
+            const dataPrev = new Date(emp.data_devolucao_prevista);
+            dataPrev.setHours(0, 0, 0, 0);
+            const diffDias = Math.ceil((dataPrev - hoje) / 86400000);
+            if (diffDias < 0) {
+                rowClass = 'style="background-color:#fee2e2;"';
+                statusBadge = 'status-atrasado';
+                statusText = 'Atrasado';
+                alertIcon = '⚠️ ';
+            } else if (diffDias <= 3) {
+                rowClass = 'style="background-color:#fef3c7;"';
+                alertIcon = '🔔 ';
+            }
+        }
+        
         return `
-            <tr>
-                <td>${eq.nome}</td>
+            <tr ${rowClass}>
+                <td>${alertIcon}${eq.nome}</td>
                 <td>${eq.tipo}</td>
                 <td>${eq.numero_serie}</td>
                 <td>${emp.responsavel}</td>
                 <td>${emp.departamento}</td>
                 <td>${dataEmprestimo}</td>
                 <td>${dataPrevista}</td>
-                <td><span class="status-badge status-ativo">Ativo</span></td>
+                <td><span class="status-badge ${statusBadge}">${statusText}</span></td>
                 <td>
                     <div class="action-buttons">
                         <button class="btn btn-success" onclick="devolverEquipamento(${emp.id})">✓ Devolver</button>

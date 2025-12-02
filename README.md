@@ -388,8 +388,8 @@ O sistema é totalmente responsivo e funciona em:
 - [x] Exportação de relatórios em PDF
 - [x] Upload de fotos dos equipamentos
 - [x] Histórico de manutenções
-- [ ] Notificações de devolução próxima ao vencimento
-- [ ] Alertas de empréstimos atrasados
+- [x] Notificações de devolução próxima ao vencimento
+- [x] Alertas de empréstimos atrasados
 - [ ] QR Code para identificação rápida
 - [ ] Backup automático do banco de dados
 - [ ] Dashboard com mais métricas (empréstimos por departamento, etc.)

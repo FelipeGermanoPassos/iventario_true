@@ -823,6 +823,43 @@ def deletar_emprestimo(id):
             'message': f'Erro ao deletar empréstimo: {str(e)}'
         }), 400
 
+
+@main.route('/emprestimos/notificacoes')
+@login_required
+def emprestimos_notificacoes():
+    """Retorna empréstimos próximos ao vencimento e atrasados"""
+    try:
+        dias_alerta = int(request.args.get('dias', 3))  # Padrão: 3 dias antes
+        hoje = datetime.utcnow().date()
+        data_limite = hoje + datetime.timedelta(days=dias_alerta)
+        
+        # Empréstimos ativos próximos ao vencimento (dentro dos próximos N dias)
+        proximos_vencimento = Emprestimo.query.filter(
+            Emprestimo.status == 'Ativo',
+            Emprestimo.data_devolucao_prevista.isnot(None),
+            Emprestimo.data_devolucao_prevista > hoje,
+            Emprestimo.data_devolucao_prevista <= data_limite
+        ).order_by(Emprestimo.data_devolucao_prevista).all()
+        
+        # Empréstimos atrasados (data prevista já passou)
+        atrasados = Emprestimo.query.filter(
+            Emprestimo.status == 'Ativo',
+            Emprestimo.data_devolucao_prevista.isnot(None),
+            Emprestimo.data_devolucao_prevista < hoje
+        ).order_by(Emprestimo.data_devolucao_prevista).all()
+        
+        return jsonify({
+            'success': True,
+            'proximos_vencimento': [e.to_dict() for e in proximos_vencimento],
+            'atrasados': [e.to_dict() for e in atrasados],
+            'total_notificacoes': len(proximos_vencimento) + len(atrasados)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao buscar notificações: {str(e)}'
+        }), 400
+
 # ==================== ROTAS DE RELATÓRIOS ====================
 
 @main.route('/relatorios')
