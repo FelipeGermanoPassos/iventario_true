@@ -1,10 +1,8 @@
-// ID do usuário atual (pegando do atributo data do body)
-const CURRENT_USER_ID = parseInt(document.body.dataset.currentUserId);
-
 // Variável global para armazenar usuários
 let todosUsuarios = [];
 let todosBackups = [];
 let tabAtual = 'usuarios';
+let CURRENT_USER_ID; // Será inicializado no DOMContentLoaded
 
 // Controle de tabs
 function mostrarTab(nomeTab) {
@@ -32,6 +30,9 @@ function mostrarTab(nomeTab) {
 // Carrega dados ao iniciar
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded - iniciando');
+    
+    // Inicializa o ID do usuário atual (pegando do atributo data do body)
+    CURRENT_USER_ID = parseInt(document.body.dataset.currentUserId);
     
     carregarUsuarios();
     
