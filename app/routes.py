@@ -67,23 +67,33 @@ def login():
         return redirect(url_for('main.index'))
     
     if request.method == 'POST':
-        data = request.get_json()
-        email = data.get('email')
-        senha = data.get('senha')
-        
-        usuario = Usuario.query.filter_by(email=email).first()
-        
-        if usuario and usuario.check_password(senha):
-            if not usuario.ativo:
-                return jsonify({'success': False, 'message': 'Usuário inativo. Contate o administrador.'}), 403
+        try:
+            data = request.get_json()
+            email = data.get('email')
+            senha = data.get('senha')
             
-            login_user(usuario, remember=data.get('lembrar', False))
-            usuario.ultimo_acesso = datetime.utcnow()
-            db.session.commit()
+            if not email or not senha:
+                return jsonify({'success': False, 'message': 'Email e senha são obrigatórios.'}), 400
             
-            return jsonify({'success': True, 'message': 'Login realizado com sucesso!'})
-        
-        return jsonify({'success': False, 'message': 'Email ou senha incorretos.'}), 401
+            usuario = Usuario.query.filter_by(email=email).first()
+            
+            if usuario and usuario.check_password(senha):
+                if not usuario.ativo:
+                    return jsonify({'success': False, 'message': 'Usuário inativo. Contate o administrador.'}), 403
+                
+                login_user(usuario, remember=data.get('lembrar', False))
+                usuario.ultimo_acesso = datetime.utcnow()
+                db.session.commit()
+                
+                return jsonify({'success': True, 'message': 'Login realizado com sucesso!'})
+            
+            return jsonify({'success': False, 'message': 'Email ou senha incorretos.'}), 401
+            
+        except Exception as e:
+            current_app.logger.error(f'Erro no login: {str(e)}')
+            import traceback
+            current_app.logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'message': f'Erro interno do servidor: {str(e)}'}), 500
     
     return render_template('login.html')
 

@@ -27,7 +27,12 @@ class Usuario(UserMixin, db.Model):
     
     def check_password(self, senha):
         """Verifica se a senha está correta"""
-        return check_password_hash(self.senha_hash, senha)
+        try:
+            return check_password_hash(self.senha_hash, senha)
+        except Exception as e:
+            # Fallback para formato antigo ou corrompido
+            print(f"Erro ao verificar senha: {e}")
+            return False
     
     def to_dict(self):
         """Converte o objeto para dicionário"""
