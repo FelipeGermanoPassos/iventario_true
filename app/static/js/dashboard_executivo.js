@@ -92,6 +92,11 @@ function atualizarGraficos(data) {
 function criarGraficoInvestimentoDept(dados) {
     const ctx = document.getElementById('chartInvestimentoDept').getContext('2d');
     
+    if (!dados || dados.length === 0) {
+        // Dados padrão quando não há informações
+        dados = [{ departamento: 'Sem Dados', valor_total: 0 }];
+    }
+    
     const labels = dados.map(d => d.departamento);
     const valores = dados.map(d => d.valor_total);
     
@@ -140,6 +145,10 @@ function criarGraficoInvestimentoDept(dados) {
 function criarGraficoEmprestimosMes(dados) {
     const ctx = document.getElementById('chartEmprestimosMes').getContext('2d');
     
+    if (!dados || dados.length === 0) {
+        dados = [{ mes: '2024-12', quantidade: 0 }];
+    }
+    
     const labels = dados.map(d => formatarMesAno(d.mes));
     const quantidades = dados.map(d => d.quantidade);
     
@@ -180,6 +189,10 @@ function criarGraficoEmprestimosMes(dados) {
 // Gráfico: Custos de Manutenção por Mês
 function criarGraficoCustosMes(dados) {
     const ctx = document.getElementById('chartCustosMes').getContext('2d');
+    
+    if (!dados || dados.length === 0) {
+        dados = [{ mes: '2024-12', custo: 0 }];
+    }
     
     const labels = dados.map(d => formatarMesAno(d.mes));
     const custos = dados.map(d => d.custo);
@@ -229,11 +242,15 @@ function criarGraficoCustosMes(dados) {
 function criarGraficoTempoDept(dados) {
     const ctx = document.getElementById('chartTempoDept').getContext('2d');
     
+    if (!dados || dados.length === 0) {
+        dados = [{ departamento: 'Sem Dados', tempo_medio_dias: 0 }];
+    }
+    
     const labels = dados.map(d => d.departamento);
     const tempos = dados.map(d => d.tempo_medio_dias);
     
     charts.tempoDept = new Chart(ctx, {
-        type: 'horizontalBar',
+        type: 'bar',
         data: {
             labels: labels,
             datasets: [{

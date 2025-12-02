@@ -1532,10 +1532,9 @@ def dashboard_executivo_dados():
         equipamentos_por_dept = {}
         valor_por_dept = {}
         for eq in equipamentos:
-            if eq.departamento_atual:
-                dept = eq.departamento_atual
-                equipamentos_por_dept[dept] = equipamentos_por_dept.get(dept, 0) + 1
-                valor_por_dept[dept] = valor_por_dept.get(dept, 0) + (eq.valor or 0)
+            dept = eq.departamento_atual or 'Não Atribuído'
+            equipamentos_por_dept[dept] = equipamentos_por_dept.get(dept, 0) + 1
+            valor_por_dept[dept] = valor_por_dept.get(dept, 0) + (eq.valor or 0)
         
         # Custo total de manutenções
         manutencoes = Manutencao.query.all()
@@ -1687,7 +1686,7 @@ def dashboard_executivo_dados():
                 'equipamentos_por_departamento': [
                     {'departamento': dept, 'quantidade': qtd, 'valor_total': round(valor_por_dept.get(dept, 0), 2)}
                     for dept, qtd in sorted(equipamentos_por_dept.items(), key=lambda x: x[1], reverse=True)
-                ]
+                ] if equipamentos_por_dept else []
             },
             'manutencoes': {
                 'custo_total': round(custo_total_manutencoes, 2),
