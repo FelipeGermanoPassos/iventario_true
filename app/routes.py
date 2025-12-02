@@ -1,17 +1,16 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response, current_app, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import db, Equipamento, Emprestimo, Usuario, EquipamentoFoto, Manutencao
-from app.prediction_service import prediction_service
+try:
+    from app.prediction_service import prediction_service
+    _prediction_import_error = None
+except Exception as _e:
+    prediction_service = None
+    _prediction_import_error = str(_e)
 from datetime import datetime
 from sqlalchemy import func
 from functools import wraps
 from io import BytesIO
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from werkzeug.utils import secure_filename
 import os
 import uuid
@@ -1287,6 +1286,14 @@ def listar_departamentos():
 def exportar_relatorio_pdf():
     """Exporta relatório de empréstimos em PDF"""
     try:
+        # Importações pesadas movidas para dentro da função (melhor para serverless)
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
         filtro = request.args.get('filtro', 'todos')
         data_inicio = request.args.get('data_inicio')
         data_fim = request.args.get('data_fim')
@@ -1889,6 +1896,12 @@ def previsao_demanda():
 def previsao_demanda_dados():
     """API para obter previsões de demanda baseadas em IA"""
     try:
+        if prediction_service is None:
+            return jsonify({
+                'success': False,
+                'message': 'Funcionalidade de IA indisponível neste deploy (dependências ausentes).',
+                'detalhe': _prediction_import_error
+            }), 501
         # Análise de demanda por tipo
         resultado = prediction_service.analisar_demanda_por_tipo()
         
