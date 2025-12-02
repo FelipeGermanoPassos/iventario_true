@@ -313,6 +313,7 @@ function renderizarEquipamentos(lista) {
             <td>
                 <div class="action-buttons">
                     <button class="btn" onclick="abrirModalManutencao(${eq.id})">🛠️ Manutenção</button>
+                    <button class="btn" onclick="mostrarQRCode(${eq.id})">📱 QR Code</button>
                     <button class="btn btn-edit" onclick="editarEquipamento(${eq.id})">✏️ Editar</button>
                     <button class="btn btn-danger" onclick="deletarEquipamento(${eq.id})">🗑️ Deletar</button>
                 </div>
@@ -834,6 +835,100 @@ async function deletarEmprestimo(id) {
         console.error('Erro ao deletar empréstimo:', error);
         mostrarAlerta('Erro ao deletar empréstimo', 'error');
     }
+}
+
+// ===== QR CODE =====
+
+let qrcodeAtual = null;
+
+async function mostrarQRCode(equipamentoId) {
+    try {
+        const response = await fetch(`/equipamento/${equipamentoId}/qrcode`);
+        const data = await response.json();
+        
+        if (data.success) {
+            qrcodeAtual = data;
+            
+            // Exibe informações do equipamento
+            const info = `
+                <strong>Nome:</strong> ${data.equipamento.nome}<br>
+                <strong>Marca:</strong> ${data.equipamento.marca}<br>
+                <strong>Modelo:</strong> ${data.equipamento.modelo}<br>
+                <strong>Nº Série:</strong> ${data.equipamento.numero_serie}
+            `;
+            document.getElementById('qrcodeInfo').innerHTML = info;
+            document.getElementById('qrcodeImage').src = data.qrcode;
+            document.getElementById('modalQRCode').style.display = 'block';
+        } else {
+            alert(data.message || 'Erro ao gerar QR Code');
+        }
+    } catch (error) {
+        console.error('Erro ao gerar QR Code:', error);
+        alert('Erro ao gerar QR Code');
+    }
+}
+
+function fecharModalQRCode() {
+    document.getElementById('modalQRCode').style.display = 'none';
+    qrcodeAtual = null;
+}
+
+function baixarQRCode() {
+    if (!qrcodeAtual) return;
+    
+    const link = document.createElement('a');
+    link.href = qrcodeAtual.qrcode;
+    link.download = `qrcode_${qrcodeAtual.equipamento.numero_serie}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function imprimirQRCode() {
+    if (!qrcodeAtual) return;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>QR Code - ${qrcodeAtual.equipamento.nome}</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    text-align: center; 
+                    padding: 20px;
+                }
+                img { 
+                    max-width: 300px; 
+                    border: 2px solid #333;
+                    padding: 10px;
+                    background: white;
+                }
+                .info { 
+                    margin: 20px 0; 
+                    text-align: left;
+                    display: inline-block;
+                }
+            </style>
+        </head>
+        <body>
+            <h2>Equipamento: ${qrcodeAtual.equipamento.nome}</h2>
+            <div class="info">
+                <strong>Marca:</strong> ${qrcodeAtual.equipamento.marca}<br>
+                <strong>Modelo:</strong> ${qrcodeAtual.equipamento.modelo}<br>
+                <strong>Nº Série:</strong> ${qrcodeAtual.equipamento.numero_serie}<br>
+                <strong>ID:</strong> ${qrcodeAtual.equipamento.id}
+            </div><br>
+            <img src="${qrcodeAtual.qrcode}" />
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
 }
 
 // ===== MANUTENÇÕES =====

@@ -14,6 +14,8 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from werkzeug.utils import secure_filename
 import os
 import uuid
+import qrcode
+import base64
 
 main = Blueprint('main', __name__)
 
@@ -546,6 +548,48 @@ def deletar_equipamento(id):
         return jsonify({
             'success': False,
             'message': f'Erro ao deletar equipamento: {str(e)}'
+        }), 400
+
+
+@main.route('/equipamento/<int:id>/qrcode')
+@login_required
+def gerar_qrcode(id):
+    """Gera QR Code para um equipamento"""
+    try:
+        equipamento = Equipamento.query.get_or_404(id)
+        
+        # Dados para o QR Code (ID e número de série)
+        dados_qr = f"ID: {equipamento.id}\nNome: {equipamento.nome}\nN° Série: {equipamento.numero_serie}\nMarca: {equipamento.marca}\nModelo: {equipamento.modelo}"
+        
+        # Gera o QR Code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(dados_qr)
+        qr.make(fit=True)
+        
+        # Cria a imagem
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Converte para base64
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return jsonify({
+            'success': True,
+            'qrcode': f'data:image/png;base64,{img_base64}',
+            'equipamento': equipamento.to_dict()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao gerar QR Code: {str(e)}'
         }), 400
 
 

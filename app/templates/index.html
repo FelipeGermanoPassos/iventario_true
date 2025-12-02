@@ -411,7 +411,26 @@
             </div>
         </div>
     </div>
-
+    <!-- Modal QR Code -->
+    <div id="modalQRCode" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close" onclick="fecharModalQRCode()">&times;</span>
+            <h2>QR Code do Equipamento</h2>
+            
+            <div id="qrcodeContainer" style="text-align: center; padding: 20px;">
+                <div id="qrcodeInfo" style="margin-bottom: 15px; text-align: left;"></div>
+                <img id="qrcodeImage" style="max-width: 100%; border: 2px solid #ddd; padding: 10px; background: white;" />
+                <div style="margin-top: 15px;">
+                    <button onclick="baixarQRCode()" class="btn btn-primary">
+                        📥 Baixar QR Code
+                    </button>
+                    <button onclick="imprimirQRCode()" class="btn btn-secondary">
+                        🖨️ Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
 </body>
