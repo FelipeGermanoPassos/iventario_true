@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Executivo - Inventário TI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_executivo.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header com navegação -->
+        <header class="main-header">
+            <div class="header-content">
+                <h1>📊 Dashboard Executivo</h1>
+                <div class="header-actions">
+                    <span class="user-info">👤 {{ current_user.nome }}</span>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">🏠 Voltar</a>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Filtros -->
+            <div class="filters-section">
+                <div class="filter-item">
+                    <button id="btnAtualizar" class="btn btn-primary">🔄 Atualizar Dados</button>
+                </div>
+                <div class="filter-item">
+                    <span id="ultimaAtualizacao" class="last-update">Carregando...</span>
+                </div>
+            </div>
+
+            <!-- KPIs Principais -->
+            <div class="kpis-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon">💰</div>
+                    <div class="kpi-content">
+                        <h3>Valor Total do Inventário</h3>
+                        <p class="kpi-value" id="valorTotalInventario">R$ 0,00</p>
+                        <span class="kpi-subtitle" id="totalEquipamentos">0 equipamentos</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon">📊</div>
+                    <div class="kpi-content">
+                        <h3>Taxa de Utilização</h3>
+                        <p class="kpi-value" id="taxaUtilizacao">0%</p>
+                        <span class="kpi-subtitle" id="emprestimosAtivos">0 empréstimos ativos</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon">🔧</div>
+                    <div class="kpi-content">
+                        <h3>Custo de Manutenções</h3>
+                        <p class="kpi-value" id="custoManutencoes">R$ 0,00</p>
+                        <span class="kpi-subtitle" id="manutencoesPendentes">0 pendentes</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon">📈</div>
+                    <div class="kpi-content">
+                        <h3>ROI Médio</h3>
+                        <p class="kpi-value" id="roiMedio">0%</p>
+                        <span class="kpi-subtitle">Return on Investment</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos Row 1 -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>💼 Investimento por Departamento</h3>
+                    </div>
+                    <canvas id="chartInvestimentoDept"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>📅 Empréstimos por Mês (12 meses)</h3>
+                    </div>
+                    <canvas id="chartEmprestimosMes"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráficos Row 2 -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>💸 Custos de Manutenção por Mês</h3>
+                    </div>
+                    <canvas id="chartCustosMes"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>⏱️ Tempo Médio de Empréstimo por Departamento</h3>
+                    </div>
+                    <canvas id="chartTempoDept"></canvas>
+                </div>
+            </div>
+
+            <!-- Tabelas de ROI -->
+            <div class="tables-section">
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>🏆 Top 10 Equipamentos - Melhor ROI</h3>
+                        <span class="table-subtitle">Equipamentos com melhor retorno sobre investimento</span>
+                    </div>
+                    <div class="table-container">
+                        <table id="tabelaTopROI">
+                            <thead>
+                                <tr>
+                                    <th>Equipamento</th>
+                                    <th>Tipo</th>
+                                    <th>Valor Aquisição</th>
+                                    <th>Valor Residual</th>
+                                    <th>Dias de Uso</th>
+                                    <th>Custo Manutenção</th>
+                                    <th>ROI</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="7" class="text-center">Carregando dados...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>⚠️ Equipamentos com Baixo ROI</h3>
+                        <span class="table-subtitle">Requer atenção - possível substituição ou otimização</span>
+                    </div>
+                    <div class="table-container">
+                        <table id="tabelaBottomROI">
+                            <thead>
+                                <tr>
+                                    <th>Equipamento</th>
+                                    <th>Tipo</th>
+                                    <th>Valor Aquisição</th>
+                                    <th>Valor Residual</th>
+                                    <th>Dias de Uso</th>
+                                    <th>Custo Manutenção</th>
+                                    <th>ROI</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="7" class="text-center">Carregando dados...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>🔧 Equipamentos Problemáticos</h3>
+                        <span class="table-subtitle">Maior quantidade de manutenções</span>
+                    </div>
+                    <div class="table-container">
+                        <table id="tabelaProblematicos">
+                            <thead>
+                                <tr>
+                                    <th>Equipamento</th>
+                                    <th>Tipo</th>
+                                    <th>Marca/Modelo</th>
+                                    <th>Quantidade de Manutenções</th>
+                                    <th>Custo Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" class="text-center">Carregando dados...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights e Recomendações -->
+            <div class="insights-section">
+                <div class="insight-card">
+                    <h3>💡 Insights e Recomendações</h3>
+                    <div id="insightsContainer">
+                        <p class="loading-text">Analisando dados...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard_executivo.js') }}"></script>
+</body>
+</html>

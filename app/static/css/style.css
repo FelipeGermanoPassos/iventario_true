@@ -120,6 +120,20 @@ header h1 {
     box-shadow: var(--shadow-lg);
 }
 
+.btn-dashboard-exec {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.btn-dashboard-exec:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #653a91 100%);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
 /* Botões */
 .btn {
     padding: 10px 20px;

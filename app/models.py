@@ -64,6 +64,8 @@ class Equipamento(db.Model):
     status = db.Column(db.String(20), nullable=False)  # Estoque, Emprestado, Manutenção, Inativo
     data_aquisicao = db.Column(db.Date)
     valor = db.Column(db.Float)
+    vida_util_anos = db.Column(db.Integer, default=5)  # Vida útil esperada em anos
+    departamento_atual = db.Column(db.String(100))  # Departamento que possui o equipamento
     observacoes = db.Column(db.Text)
     data_cadastro = db.Column(db.DateTime, default=datetime.utcnow)
     data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -95,6 +97,8 @@ class Equipamento(db.Model):
             'status': self.status,
             'data_aquisicao': self.data_aquisicao.strftime('%Y-%m-%d') if self.data_aquisicao else None,
             'valor': self.valor,
+            'vida_util_anos': self.vida_util_anos,
+            'departamento_atual': self.departamento_atual,
             'observacoes': self.observacoes,
             'data_cadastro': self.data_cadastro.strftime('%Y-%m-%d %H:%M:%S'),
             'data_atualizacao': self.data_atualizacao.strftime('%Y-%m-%d %H:%M:%S'),

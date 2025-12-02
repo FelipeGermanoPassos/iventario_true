@@ -1502,6 +1502,230 @@ def exportar_relatorio_pdf():
             'message': f'Erro ao gerar PDF: {str(e)}'
         }), 400
 
+# ====== ROTAS DO DASHBOARD EXECUTIVO ======
+
+@main.route('/dashboard-executivo')
+@login_required
+def dashboard_executivo():
+    """Página do dashboard executivo com métricas gerenciais"""
+    return render_template('dashboard_executivo.html')
+
+@main.route('/dashboard-executivo/dados')
+@login_required
+def dashboard_executivo_dados():
+    """Retorna dados consolidados para o dashboard executivo"""
+    try:
+        from datetime import date, timedelta
+        from dateutil.relativedelta import relativedelta
+        
+        hoje = date.today()
+        
+        # ========== MÉTRICAS DE INVENTÁRIO ==========
+        
+        # Total de equipamentos e valor total
+        equipamentos = Equipamento.query.all()
+        total_equipamentos = len(equipamentos)
+        valor_total_inventario = sum([eq.valor or 0 for eq in equipamentos])
+        valor_medio_equipamento = valor_total_inventario / total_equipamentos if total_equipamentos > 0 else 0
+        
+        # Equipamentos por departamento
+        equipamentos_por_dept = {}
+        valor_por_dept = {}
+        for eq in equipamentos:
+            if eq.departamento_atual:
+                dept = eq.departamento_atual
+                equipamentos_por_dept[dept] = equipamentos_por_dept.get(dept, 0) + 1
+                valor_por_dept[dept] = valor_por_dept.get(dept, 0) + (eq.valor or 0)
+        
+        # Custo total de manutenções
+        manutencoes = Manutencao.query.all()
+        custo_total_manutencoes = sum([m.custo or 0 for m in manutencoes])
+        manutencoes_pendentes = sum([1 for m in manutencoes if m.status == 'Agendada'])
+        
+        # Manutenções por equipamento (identificar equipamentos problemáticos)
+        manutencoes_por_equipamento = {}
+        custo_manutencao_por_equipamento = {}
+        for m in manutencoes:
+            eq_id = m.equipamento_id
+            manutencoes_por_equipamento[eq_id] = manutencoes_por_equipamento.get(eq_id, 0) + 1
+            custo_manutencao_por_equipamento[eq_id] = custo_manutencao_por_equipamento.get(eq_id, 0) + (m.custo or 0)
+        
+        # Top 5 equipamentos com mais manutenções
+        top_manutencoes = sorted(manutencoes_por_equipamento.items(), key=lambda x: x[1], reverse=True)[:5]
+        equipamentos_problematicos = []
+        for eq_id, qtd in top_manutencoes:
+            eq = Equipamento.query.get(eq_id)
+            if eq:
+                equipamentos_problematicos.append({
+                    'nome': eq.nome,
+                    'tipo': eq.tipo,
+                    'marca': eq.marca,
+                    'modelo': eq.modelo,
+                    'quantidade_manutencoes': qtd,
+                    'custo_total': custo_manutencao_por_equipamento.get(eq_id, 0)
+                })
+        
+        # ========== MÉTRICAS DE UTILIZAÇÃO ==========
+        
+        # Empréstimos
+        emprestimos = Emprestimo.query.all()
+        emprestimos_ativos = [e for e in emprestimos if e.status == 'Ativo']
+        emprestimos_devolvidos = [e for e in emprestimos if e.status == 'Devolvido']
+        
+        # Taxa de utilização
+        equipamentos_em_uso = len(emprestimos_ativos)
+        taxa_utilizacao = (equipamentos_em_uso / total_equipamentos * 100) if total_equipamentos > 0 else 0
+        
+        # Empréstimos por departamento
+        emprestimos_por_dept = {}
+        tempo_medio_emprestimo_dept = {}
+        
+        for e in emprestimos_devolvidos:
+            dept = e.departamento or 'Não informado'
+            if dept not in emprestimos_por_dept:
+                emprestimos_por_dept[dept] = []
+            
+            # Calcular duração
+            if e.data_devolucao_real:
+                duracao = (e.data_devolucao_real - e.data_emprestimo).days
+                emprestimos_por_dept[dept].append(duracao)
+        
+        # Calcular tempo médio por departamento
+        for dept, duracoes in emprestimos_por_dept.items():
+            tempo_medio_emprestimo_dept[dept] = sum(duracoes) / len(duracoes) if duracoes else 0
+        
+        # ========== CÁLCULO DE ROI E DEPRECIAÇÃO ==========
+        
+        # ROI (Return on Investment) = (Valor gerado - Custo) / Custo
+        # Vamos considerar que cada dia de uso gera valor proporcional
+        
+        roi_por_equipamento = []
+        equipamentos_com_valor = [eq for eq in equipamentos if eq.valor and eq.valor > 0]
+        
+        for eq in equipamentos_com_valor:
+            # Contar dias de empréstimo
+            emprestimos_eq = [e for e in emprestimos if e.equipamento_id == eq.id and e.status == 'Devolvido']
+            dias_uso = sum([(e.data_devolucao_real - e.data_emprestimo).days for e in emprestimos_eq if e.data_devolucao_real])
+            
+            # Custo de manutenção deste equipamento
+            custo_manutencao = custo_manutencao_por_equipamento.get(eq.id, 0)
+            
+            # Valor depreciado (método linear)
+            vida_util_anos = eq.vida_util_anos or 5
+            if eq.data_aquisicao:
+                idade_anos = (hoje - eq.data_aquisicao).days / 365.25
+                taxa_depreciacao = min(idade_anos / vida_util_anos, 1.0)  # Máximo 100%
+                valor_residual = eq.valor * (1 - taxa_depreciacao)
+            else:
+                valor_residual = eq.valor
+                idade_anos = 0
+            
+            # Cálculo simplificado de ROI
+            # Considerando que cada dia de uso vale 0.3% do valor do equipamento
+            valor_gerado = (eq.valor * 0.003) * dias_uso
+            custo_total = eq.valor + custo_manutencao
+            roi_percentual = ((valor_gerado - custo_total) / custo_total * 100) if custo_total > 0 else 0
+            
+            roi_por_equipamento.append({
+                'nome': eq.nome,
+                'tipo': eq.tipo,
+                'marca': eq.marca,
+                'modelo': eq.modelo,
+                'valor_aquisicao': eq.valor,
+                'valor_residual': round(valor_residual, 2),
+                'dias_uso': dias_uso,
+                'custo_manutencao': custo_manutencao,
+                'roi_percentual': round(roi_percentual, 2),
+                'idade_anos': round(idade_anos, 1)
+            })
+        
+        # Ordenar por ROI
+        roi_por_equipamento.sort(key=lambda x: x['roi_percentual'], reverse=True)
+        top_roi = roi_por_equipamento[:10]
+        bottom_roi = roi_por_equipamento[-10:] if len(roi_por_equipamento) > 10 else []
+        
+        # ========== ANÁLISE TEMPORAL ==========
+        
+        # Empréstimos por mês (últimos 12 meses)
+        emprestimos_por_mes = {}
+        for i in range(12):
+            mes = hoje - relativedelta(months=i)
+            mes_key = mes.strftime('%Y-%m')
+            emprestimos_por_mes[mes_key] = 0
+        
+        for e in emprestimos:
+            mes_key = e.data_emprestimo.strftime('%Y-%m')
+            if mes_key in emprestimos_por_mes:
+                emprestimos_por_mes[mes_key] += 1
+        
+        # Ordenar por data
+        emprestimos_por_mes_ordenado = dict(sorted(emprestimos_por_mes.items()))
+        
+        # Custos de manutenção por mês
+        custos_por_mes = {}
+        for i in range(12):
+            mes = hoje - relativedelta(months=i)
+            mes_key = mes.strftime('%Y-%m')
+            custos_por_mes[mes_key] = 0
+        
+        for m in manutencoes:
+            if m.data_inicio:
+                mes_key = m.data_inicio.strftime('%Y-%m')
+                if mes_key in custos_por_mes:
+                    custos_por_mes[mes_key] += (m.custo or 0)
+        
+        custos_por_mes_ordenado = dict(sorted(custos_por_mes.items()))
+        
+        # ========== CONSOLIDAÇÃO DOS DADOS ==========
+        
+        return jsonify({
+            'success': True,
+            'inventario': {
+                'total_equipamentos': total_equipamentos,
+                'valor_total': round(valor_total_inventario, 2),
+                'valor_medio': round(valor_medio_equipamento, 2),
+                'equipamentos_por_departamento': [
+                    {'departamento': dept, 'quantidade': qtd, 'valor_total': round(valor_por_dept.get(dept, 0), 2)}
+                    for dept, qtd in sorted(equipamentos_por_dept.items(), key=lambda x: x[1], reverse=True)
+                ]
+            },
+            'manutencoes': {
+                'custo_total': round(custo_total_manutencoes, 2),
+                'pendentes': manutencoes_pendentes,
+                'equipamentos_problematicos': equipamentos_problematicos,
+                'custos_por_mes': [
+                    {'mes': mes, 'custo': round(custo, 2)}
+                    for mes, custo in custos_por_mes_ordenado.items()
+                ]
+            },
+            'utilizacao': {
+                'emprestimos_ativos': len(emprestimos_ativos),
+                'taxa_utilizacao': round(taxa_utilizacao, 2),
+                'tempo_medio_por_departamento': [
+                    {'departamento': dept, 'tempo_medio_dias': round(tempo, 1)}
+                    for dept, tempo in sorted(tempo_medio_emprestimo_dept.items(), key=lambda x: x[1], reverse=True)
+                ],
+                'emprestimos_por_mes': [
+                    {'mes': mes, 'quantidade': qtd}
+                    for mes, qtd in emprestimos_por_mes_ordenado.items()
+                ]
+            },
+            'roi': {
+                'top_10': top_roi,
+                'bottom_10': bottom_roi,
+                'roi_medio': round(sum([r['roi_percentual'] for r in roi_por_equipamento]) / len(roi_por_equipamento), 2) if roi_por_equipamento else 0
+            }
+        })
+        
+    except Exception as e:
+        print(f"Erro ao gerar dados do dashboard executivo: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao gerar dados: {str(e)}'
+        }), 400
+
 # ====== ROTAS DE E-MAIL ======
 
 @main.route('/admin/email-status', methods=['GET'])

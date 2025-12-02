@@ -628,7 +628,7 @@ O sistema é totalmente responsivo e funciona em:
 - [x] **Telegram Bot**: Integração com Telegram para notificações instantâneas ✅
 
 ### 📊 Análise e Inteligência
-- [ ] **Dashboard executivo**: Métricas gerenciais e KPIs (custo por departamento, ROI de equipamentos)
+- [x] **Dashboard executivo**: Métricas gerenciais e KPIs (custo por departamento, ROI de equipamentos)
 - [ ] **Previsão de demanda**: IA para prever necessidades de compra baseado no histórico
 - [ ] **Análise de uso**: Identificar equipamentos subutilizados ou mais requisitados
 - [ ] **Relatórios agendados**: Envio automático de relatórios semanais/mensais por e-mail
