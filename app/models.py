@@ -213,3 +213,36 @@ class Manutencao(db.Model):
 
     def __repr__(self):
         return f'<Manutencao {self.id} - Eq {self.equipamento_id}>'
+
+
+class PushSubscription(db.Model):
+    """Armazena subscrições de push notifications dos usuários"""
+    __tablename__ = 'push_subscriptions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    endpoint = db.Column(db.String(500), nullable=False, unique=True)
+    p256dh = db.Column(db.String(255), nullable=False)
+    auth = db.Column(db.String(255), nullable=False)
+    user_agent = db.Column(db.String(255))
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+    ativa = db.Column(db.Boolean, default=True)
+
+    # Relacionamento
+    usuario = db.relationship('Usuario', backref=db.backref('push_subscriptions', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'endpoint': self.endpoint,
+            'keys': {
+                'p256dh': self.p256dh,
+                'auth': self.auth
+            },
+            'data_criacao': self.data_criacao.strftime('%Y-%m-%d %H:%M:%S'),
+            'ativa': self.ativa
+        }
+
+    def __repr__(self):
+        return f'<PushSubscription {self.id} - Usuario {self.usuario_id}>'

@@ -10,3 +10,5 @@ env/
 .vscode/
 .idea/
 *.log
+vapid_keys.txt
+backups/

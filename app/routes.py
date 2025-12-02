@@ -1691,3 +1691,202 @@ def save_email_config():
             'success': False,
             'message': f'Erro ao salvar configuração: {str(e)}'
         }), 400
+
+
+# ==================== ROTAS DE PUSH NOTIFICATIONS ====================
+
+@main.route('/push/vapid-public-key')
+@login_required
+def get_vapid_public_key():
+    """Retorna a chave pública VAPID para subscrição de push"""
+    public_key = os.environ.get('VAPID_PUBLIC_KEY', '')
+    
+    if not public_key:
+        return jsonify({
+            'success': False,
+            'message': 'Chave pública VAPID não configurada'
+        }), 400
+    
+    return jsonify({
+        'success': True,
+        'publicKey': public_key
+    })
+
+@main.route('/push/subscribe', methods=['POST'])
+@login_required
+def subscribe_push():
+    """Salva uma nova subscrição de push notification"""
+    try:
+        from app.models import PushSubscription
+        
+        data = request.get_json()
+        subscription = data.get('subscription')
+        user_agent = data.get('userAgent', '')
+        
+        if not subscription:
+            return jsonify({
+                'success': False,
+                'message': 'Dados de subscrição inválidos'
+            }), 400
+        
+        endpoint = subscription.get('endpoint')
+        keys = subscription.get('keys', {})
+        p256dh = keys.get('p256dh')
+        auth = keys.get('auth')
+        
+        if not endpoint or not p256dh or not auth:
+            return jsonify({
+                'success': False,
+                'message': 'Dados de subscrição incompletos'
+            }), 400
+        
+        # Verifica se já existe uma subscrição com esse endpoint
+        existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
+        
+        if existing:
+            # Atualiza a subscrição existente
+            existing.usuario_id = current_user.id
+            existing.p256dh = p256dh
+            existing.auth = auth
+            existing.user_agent = user_agent
+            existing.ativa = True
+            existing.data_criacao = datetime.utcnow()
+        else:
+            # Cria nova subscrição
+            new_subscription = PushSubscription(
+                usuario_id=current_user.id,
+                endpoint=endpoint,
+                p256dh=p256dh,
+                auth=auth,
+                user_agent=user_agent
+            )
+            db.session.add(new_subscription)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Subscrição salva com sucesso'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f'Erro ao salvar subscrição: {str(e)}')
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao salvar subscrição: {str(e)}'
+        }), 400
+
+@main.route('/push/unsubscribe', methods=['POST'])
+@login_required
+def unsubscribe_push():
+    """Remove uma subscrição de push notification"""
+    try:
+        from app.models import PushSubscription
+        
+        data = request.get_json()
+        endpoint = data.get('endpoint')
+        
+        if not endpoint:
+            return jsonify({
+                'success': False,
+                'message': 'Endpoint não fornecido'
+            }), 400
+        
+        # Busca e remove a subscrição
+        subscription = PushSubscription.query.filter_by(
+            endpoint=endpoint,
+            usuario_id=current_user.id
+        ).first()
+        
+        if subscription:
+            db.session.delete(subscription)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Subscrição removida com sucesso'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Subscrição não encontrada'
+            }), 404
+            
+    except Exception as e:
+        current_app.logger.error(f'Erro ao remover subscrição: {str(e)}')
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao remover subscrição: {str(e)}'
+        }), 400
+
+@main.route('/push/test', methods=['POST'])
+@login_required
+def test_push():
+    """Envia uma notificação de teste para o usuário atual"""
+    try:
+        from app.push_service import PushNotificationService
+        
+        count = PushNotificationService.send_to_user(
+            usuario_id=current_user.id,
+            title='Teste de Notificação',
+            body='Esta é uma notificação de teste do Sistema de Inventário TI! 🔔',
+            url='/',
+            tag='test'
+        )
+        
+        if count > 0:
+            return jsonify({
+                'success': True,
+                'message': f'Notificação de teste enviada para {count} dispositivo(s)'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Não foi possível enviar a notificação. Verifique se você está inscrito para receber notificações.'
+            }), 400
+            
+    except Exception as e:
+        current_app.logger.error(f'Erro ao enviar notificação de teste: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao enviar notificação: {str(e)}'
+        }), 400
+
+@main.route('/admin/push/broadcast', methods=['POST'])
+@admin_required
+def broadcast_push():
+    """Envia uma notificação para todos os usuários (apenas admin)"""
+    try:
+        from app.push_service import PushNotificationService
+        
+        data = request.get_json()
+        title = data.get('title', 'Inventário TI')
+        body = data.get('body')
+        url = data.get('url', '/')
+        
+        if not body:
+            return jsonify({
+                'success': False,
+                'message': 'Mensagem é obrigatória'
+            }), 400
+        
+        count = PushNotificationService.send_to_all_users(
+            title=title,
+            body=body,
+            url=url,
+            tag='broadcast'
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'Notificação enviada para {count} usuário(s)'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f'Erro ao enviar broadcast: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao enviar notificação: {str(e)}'
+        }), 400

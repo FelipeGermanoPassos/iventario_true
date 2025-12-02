@@ -58,3 +58,58 @@ self.addEventListener('fetch', event => {
     }).catch(() => caches.match(req))
   );
 });
+
+// Push Notification Support
+self.addEventListener('push', event => {
+  const options = {
+    icon: '/static/icons/icon-192.png',
+    badge: '/static/icons/icon-192.png',
+    vibrate: [100, 50, 100],
+    data: {
+      dateOfArrival: Date.now()
+    }
+  };
+
+  let data = { title: 'Inventário TI', body: 'Nova notificação' };
+  
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  options.body = data.body;
+  options.data.url = data.url || '/';
+  
+  if (data.tag) options.tag = data.tag;
+  if (data.requireInteraction) options.requireInteraction = data.requireInteraction;
+  if (data.actions) options.actions = data.actions;
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  
+  const urlToOpen = event.notification.data.url || '/';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(windowClients => {
+        // Check if there's already a window open with this URL
+        for (let client of windowClients) {
+          if (client.url === urlToOpen && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // If no window is open, open a new one
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});

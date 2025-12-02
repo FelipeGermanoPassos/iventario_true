@@ -91,6 +91,47 @@
                     <button type="submit" class="btn btn-warning">🔑 Alterar Senha</button>
                 </form>
             </section>
+
+            <!-- Notificações Push -->
+            <section class="perfil-section">
+                <div class="section-header">
+                    <h2>🔔 Notificações Push</h2>
+                </div>
+                <div class="perfil-form">
+                    <p class="info-text">
+                        Receba alertas instantâneos no seu dispositivo sobre empréstimos, devoluções e lembretes.
+                    </p>
+                    
+                    <div id="pushStatus" class="push-status">
+                        <p id="pushStatusText">Verificando status...</p>
+                    </div>
+
+                    <div class="push-actions">
+                        <button id="btnAtivarPush" class="btn btn-primary" style="display: none;">
+                            🔔 Ativar Notificações
+                        </button>
+                        <button id="btnDesativarPush" class="btn btn-secondary" style="display: none;">
+                            🔕 Desativar Notificações
+                        </button>
+                        <button id="btnTestarPush" class="btn btn-success" style="display: none;">
+                            📨 Enviar Notificação de Teste
+                        </button>
+                    </div>
+
+                    <div class="push-info">
+                        <p><strong>📱 Benefícios:</strong></p>
+                        <ul>
+                            <li>✅ Confirmação instantânea de empréstimos e devoluções</li>
+                            <li>⏰ Lembretes 3 dias antes da devolução</li>
+                            <li>🚨 Alertas de empréstimos atrasados</li>
+                            <li>📊 Notificações do sistema</li>
+                        </ul>
+                        <p class="nota">
+                            <strong>Nota:</strong> As notificações funcionam mesmo quando o app está fechado (requer navegador compatível).
+                        </p>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <!-- Mensagens de feedback -->

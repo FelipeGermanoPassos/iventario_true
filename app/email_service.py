@@ -13,15 +13,15 @@ logger = logging.getLogger(__name__)
 
 def verificar_e_enviar_notificacoes(app):
     """
-    Verifica empréstimos e envia notificações por e-mail.
+    Verifica empréstimos e envia notificações por e-mail e push.
     Chamado diariamente pelo scheduler.
     """
     with app.app_context():
-        from app.models import Emprestimo, db
+        from app.models import Emprestimo, Usuario, db
+        from app.push_service import PushNotificationService
         
         if not app.config.get('MAIL_ENABLED'):
             logger.info('Sistema de e-mail desabilitado. Configure MAIL_ENABLED=true para habilitar.')
-            return
         
         hoje = date.today()
         
@@ -29,26 +29,54 @@ def verificar_e_enviar_notificacoes(app):
         emprestimos_ativos = Emprestimo.query.filter_by(status='Ativo').all()
         
         emails_enviados = 0
+        push_enviadas = 0
         
         for emprestimo in emprestimos_ativos:
-            if not emprestimo.email_responsavel:
-                continue  # Pula se não tiver email
-            
             # Calcular dias até devolução
             if emprestimo.data_devolucao_prevista:
                 dias_ate_devolucao = (emprestimo.data_devolucao_prevista - hoje).days
                 
                 # Empréstimo atrasado
                 if dias_ate_devolucao < 0:
-                    enviar_email_atraso(app, emprestimo, abs(dias_ate_devolucao))
-                    emails_enviados += 1
+                    dias_atraso = abs(dias_ate_devolucao)
+                    
+                    # Enviar e-mail se disponível
+                    if app.config.get('MAIL_ENABLED') and emprestimo.email_responsavel:
+                        enviar_email_atraso(app, emprestimo, dias_atraso)
+                        emails_enviados += 1
+                    
+                    # Enviar push notification
+                    usuario = Usuario.query.filter_by(email=emprestimo.email_responsavel).first()
+                    if usuario:
+                        count = PushNotificationService.send_to_user(
+                            usuario_id=usuario.id,
+                            title='🚨 Devolução Atrasada',
+                            body=f'Equipamento {emprestimo.equipamento.nome} está atrasado há {dias_atraso} dia(s)',
+                            url='/',
+                            tag=f'atraso-{emprestimo.id}'
+                        )
+                        push_enviadas += count
                 
                 # Devolução próxima (3 dias antes)
                 elif dias_ate_devolucao <= 3 and dias_ate_devolucao > 0:
-                    enviar_email_lembrete(app, emprestimo, dias_ate_devolucao)
-                    emails_enviados += 1
+                    # Enviar e-mail se disponível
+                    if app.config.get('MAIL_ENABLED') and emprestimo.email_responsavel:
+                        enviar_email_lembrete(app, emprestimo, dias_ate_devolucao)
+                        emails_enviados += 1
+                    
+                    # Enviar push notification
+                    usuario = Usuario.query.filter_by(email=emprestimo.email_responsavel).first()
+                    if usuario:
+                        count = PushNotificationService.send_to_user(
+                            usuario_id=usuario.id,
+                            title='⏰ Lembrete de Devolução',
+                            body=f'Equipamento {emprestimo.equipamento.nome} deve ser devolvido em {dias_ate_devolucao} dia(s)',
+                            url='/',
+                            tag=f'lembrete-{emprestimo.id}'
+                        )
+                        push_enviadas += count
         
-        logger.info(f'Verificação de notificações concluída. {emails_enviados} e-mails enviados.')
+        logger.info(f'Verificação de notificações concluída. {emails_enviados} e-mails e {push_enviadas} push notifications enviadas.')
 
 
 def enviar_email_lembrete(app, emprestimo, dias_restantes):
@@ -198,8 +226,24 @@ def enviar_email_atraso(app, emprestimo, dias_atraso):
 
 def enviar_email_confirmacao_emprestimo(app, emprestimo):
     """
-    Envia e-mail de confirmação quando um empréstimo é registrado.
+    Envia e-mail e push notification de confirmação quando um empréstimo é registrado.
     """
+    # Enviar push notification
+    from app.models import Usuario
+    from app.push_service import PushNotificationService
+    
+    if emprestimo.email_responsavel:
+        usuario = Usuario.query.filter_by(email=emprestimo.email_responsavel).first()
+        if usuario:
+            PushNotificationService.send_to_user(
+                usuario_id=usuario.id,
+                title='✅ Empréstimo Registrado',
+                body=f'Equipamento {emprestimo.equipamento.nome} emprestado com sucesso',
+                url='/',
+                tag=f'emprestimo-{emprestimo.id}'
+            )
+    
+    # Enviar e-mail
     if not app.config.get('MAIL_ENABLED') or not emprestimo.email_responsavel:
         return
     
@@ -274,8 +318,24 @@ def enviar_email_confirmacao_emprestimo(app, emprestimo):
 
 def enviar_email_confirmacao_devolucao(app, emprestimo):
     """
-    Envia e-mail de confirmação quando um equipamento é devolvido.
+    Envia e-mail e push notification de confirmação quando um equipamento é devolvido.
     """
+    # Enviar push notification
+    from app.models import Usuario
+    from app.push_service import PushNotificationService
+    
+    if emprestimo.email_responsavel:
+        usuario = Usuario.query.filter_by(email=emprestimo.email_responsavel).first()
+        if usuario:
+            PushNotificationService.send_to_user(
+                usuario_id=usuario.id,
+                title='✅ Devolução Registrada',
+                body=f'Devolução do equipamento {emprestimo.equipamento.nome} confirmada',
+                url='/',
+                tag=f'devolucao-{emprestimo.id}'
+            )
+    
+    # Enviar e-mail
     if not app.config.get('MAIL_ENABLED') or not emprestimo.email_responsavel:
         return
     

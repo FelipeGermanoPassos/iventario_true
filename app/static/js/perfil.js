@@ -147,3 +147,122 @@ document.getElementById('senhaNova').addEventListener('input', (e) => {
         requisitos.style.color = '#059669';
     }
 });
+
+// ===== PUSH NOTIFICATIONS =====
+
+async function verificarStatusPush() {
+    const statusText = document.getElementById('pushStatusText');
+    const btnAtivar = document.getElementById('btnAtivarPush');
+    const btnDesativar = document.getElementById('btnDesativarPush');
+    const btnTestar = document.getElementById('btnTestarPush');
+    
+    // Verifica se o navegador suporta
+    if (!('Notification' in window) || !('PushManager' in window)) {
+        statusText.textContent = '❌ Seu navegador não suporta notificações push';
+        statusText.style.color = '#dc2626';
+        return;
+    }
+    
+    // Verifica a permissão
+    const permission = Notification.permission;
+    
+    if (permission === 'denied') {
+        statusText.textContent = '🚫 Notificações bloqueadas. Altere nas configurações do navegador.';
+        statusText.style.color = '#dc2626';
+        return;
+    }
+    
+    // Verifica se está subscrito
+    const isSubscribed = await window.PushNotifications.isSubscribed();
+    
+    if (isSubscribed) {
+        statusText.textContent = '✅ Notificações ativadas';
+        statusText.style.color = '#059669';
+        btnDesativar.style.display = 'inline-block';
+        btnTestar.style.display = 'inline-block';
+    } else {
+        statusText.textContent = '🔕 Notificações desativadas';
+        statusText.style.color = '#92400e';
+        btnAtivar.style.display = 'inline-block';
+    }
+}
+
+async function ativarNotificacoes() {
+    const btnAtivar = document.getElementById('btnAtivarPush');
+    btnAtivar.disabled = true;
+    btnAtivar.textContent = '⏳ Ativando...';
+    
+    try {
+        await window.PushNotifications.initialize();
+        mostrarMensagem('✅ Notificações ativadas com sucesso!', 'success');
+        await verificarStatusPush();
+    } catch (error) {
+        console.error('Erro ao ativar notificações:', error);
+        mostrarMensagem('❌ Erro ao ativar notificações. Tente novamente.', 'error');
+    } finally {
+        btnAtivar.disabled = false;
+        btnAtivar.textContent = '🔔 Ativar Notificações';
+    }
+}
+
+async function desativarNotificacoes() {
+    const btnDesativar = document.getElementById('btnDesativarPush');
+    btnDesativar.disabled = true;
+    btnDesativar.textContent = '⏳ Desativando...';
+    
+    try {
+        await window.PushNotifications.unsubscribe();
+        mostrarMensagem('🔕 Notificações desativadas', 'info');
+        await verificarStatusPush();
+    } catch (error) {
+        console.error('Erro ao desativar notificações:', error);
+        mostrarMensagem('❌ Erro ao desativar notificações', 'error');
+    } finally {
+        btnDesativar.disabled = false;
+        btnDesativar.textContent = '🔕 Desativar Notificações';
+    }
+}
+
+async function testarNotificacao() {
+    const btnTestar = document.getElementById('btnTestarPush');
+    btnTestar.disabled = true;
+    btnTestar.textContent = '⏳ Enviando...';
+    
+    try {
+        const response = await fetch('/push/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarMensagem('📨 Notificação de teste enviada!', 'success');
+        } else {
+            mostrarMensagem(`❌ ${data.message}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao enviar notificação de teste:', error);
+        mostrarMensagem('❌ Erro ao enviar notificação de teste', 'error');
+    } finally {
+        btnTestar.disabled = false;
+        btnTestar.textContent = '📨 Enviar Notificação de Teste';
+    }
+}
+
+// Event listeners para botões de push
+document.getElementById('btnAtivarPush').addEventListener('click', ativarNotificacoes);
+document.getElementById('btnDesativarPush').addEventListener('click', desativarNotificacoes);
+document.getElementById('btnTestarPush').addEventListener('click', testarNotificacao);
+
+// Verifica status ao carregar
+if (window.PushNotifications) {
+    verificarStatusPush();
+} else {
+    // Aguarda o carregamento do pwa.js
+    window.addEventListener('load', () => {
+        setTimeout(verificarStatusPush, 500);
+    });
+}

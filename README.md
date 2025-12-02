@@ -139,7 +139,66 @@ python run.py
 
 Consulte o arquivo `email_config_example.txt` para mais detalhes.
 
-### 6. Instalar no Android (PWA)
+### 6. Configurar notificações push (Opcional)
+
+O sistema suporta **notificações push** para enviar alertas instantâneos no PWA mobile:
+
+**Para habilitar:**
+
+1) Gere as chaves VAPID (necessárias para push notifications):
+
+```powershell
+python gerar_vapid_keys.py
+```
+
+2) Configure as variáveis de ambiente com as chaves geradas:
+
+**Windows PowerShell:**
+```powershell
+$env:VAPID_PRIVATE_KEY="sua-chave-privada-gerada"
+$env:VAPID_PUBLIC_KEY="sua-chave-publica-gerada"
+python run.py
+```
+
+**Linux/Mac:**
+```bash
+export VAPID_PRIVATE_KEY=sua-chave-privada-gerada
+export VAPID_PUBLIC_KEY=sua-chave-publica-gerada
+python run.py
+```
+
+3) Atualize o banco de dados para incluir a tabela de subscrições:
+
+```powershell
+python atualizar_banco_push.py
+```
+
+4) **Instale a dependência necessária:**
+
+```powershell
+pip install pywebpush
+```
+
+5) **Ativar notificações no app:**
+   - Acesse seu perfil no sistema
+   - Role até a seção "🔔 Notificações Push"
+   - Clique em "Ativar Notificações" e permita no navegador
+   - Teste clicando em "Enviar Notificação de Teste"
+
+6) **Tipos de notificações enviadas:**
+   - ✅ Confirmação de empréstimos e devoluções
+   - ⏰ Lembretes 3 dias antes da devolução
+   - 🚨 Alertas de empréstimos atrasados
+   - 📊 Notificações administrativas (broadcast)
+
+7) **Requisitos:**
+   - Navegador compatível (Chrome, Edge, Firefox, Safari 16+)
+   - HTTPS habilitado (PWA requer conexão segura)
+   - Service Worker registrado
+
+**Nota:** As notificações push funcionam mesmo com o app fechado no Android/iOS!
+
+### 7. Instalar no Android (PWA)
 
 Para instalar o sistema como aplicativo no Android (PWA), é necessário acessar via HTTPS no celular.
 
@@ -459,7 +518,7 @@ O sistema é totalmente responsivo e funciona em:
 ### 🔔 Notificações e Comunicação
 - [x] **Envio de e-mails automáticos**: Notificar responsáveis sobre devoluções próximas e atrasadas ✅
 - [x] **Sistema de lembretes**: Alertas personalizados para usuários (3 dias antes, devoluções atrasadas) ✅
-- [ ] **Notificações push no PWA**: Alertas instantâneos no app mobile
+- [x] **Notificações push no PWA**: Alertas instantâneos no app mobile ✅
 - [ ] **WhatsApp/SMS**: Integração para envio de lembretes via WhatsApp Business API
 
 ### 📊 Análise e Inteligência
@@ -494,6 +553,7 @@ O sistema é totalmente responsivo e funciona em:
 - [ ] **Assinatura digital**: Registrar assinatura do responsável na retirada
 
 ### 📱 Mobile e Integração
+- [x] **Notificações push no PWA**: Alertas instantâneos no app mobile ✅
 - [ ] **App nativo**: Versão iOS (Swift) e Android (Kotlin)
 - [ ] **Leitor de QR Code integrado**: Scan direto pelo app para identificar equipamentos
 - [ ] **Modo offline**: Funcionalidade limitada sem internet
