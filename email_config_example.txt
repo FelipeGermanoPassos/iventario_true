@@ -4,7 +4,7 @@
 # ====== CONFIGURAÇÃO DE E-MAIL ======
 
 # Habilitar/Desabilitar envio de e-mails (true ou false)
-MAIL_ENABLED=false
+MAIL_ENABLED=true
 
 # Servidor SMTP
 # Gmail: smtp.gmail.com
@@ -22,7 +22,7 @@ MAIL_USE_TLS=true
 MAIL_USE_SSL=false
 
 # Seu e-mail (remetente)
-MAIL_USERNAME=seu-email@gmail.com
+MAIL_USERNAME=noreply@truebrands.com.br
 
 # Senha do e-mail
 # IMPORTANTE: Para Gmail, use uma "Senha de App" e não sua senha normal
@@ -31,10 +31,10 @@ MAIL_USERNAME=seu-email@gmail.com
 # 2. Ative a verificação em duas etapas
 # 3. Vá em "Senhas de app" e gere uma nova senha
 # 4. Use essa senha aqui
-MAIL_PASSWORD=sua-senha-de-app-aqui
+MAIL_PASSWORD=tepu bdyd rdjx yghe
 
 # E-mail padrão do remetente (opcional, se não definido usa MAIL_USERNAME)
-MAIL_DEFAULT_SENDER=seu-email@gmail.com
+MAIL_DEFAULT_SENDER=noreply@truebrands.com.br
 
 # ====== COMO USAR ======
 
