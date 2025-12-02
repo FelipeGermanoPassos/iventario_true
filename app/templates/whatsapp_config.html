@@ -300,12 +300,17 @@
                         <h3>Credenciais do Twilio</h3>
                         
                         <div class="warning-banner">
-                            <h4>📚 Como configurar Twilio</h4>
+                            <h4>📚 Como configurar Twilio (SANDBOX para testes)</h4>
                             <ol style="margin-left: 20px; color: #92400e;">
-                                <li>Acesse <a href="https://www.twilio.com/console" target="_blank" rel="noopener">console.twilio.com</a></li>
-                                <li>Copie seu Account SID e Auth Token</li>
-                                <li>Configure um número WhatsApp (WhatsApp Sandbox para testes)</li>
+                                <li>Acesse <a href="https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn" target="_blank" rel="noopener">Twilio WhatsApp Sandbox</a></li>
+                                <li>Copie seu <strong>Account SID</strong> e <strong>Auth Token</strong> (na página principal do console)</li>
+                                <li><strong>IMPORTANTE:</strong> No Sandbox, use o número <code>+14155238886</code></li>
+                                <li>Envie uma mensagem do seu WhatsApp pessoal para o número do Sandbox com o código mostrado (ex: "join xxxxx-xxxxx")</li>
+                                <li>Após receber confirmação, você pode testar o envio de mensagens</li>
                             </ol>
+                            <p style="margin-top: 10px; color: #dc2626; font-weight: bold;">
+                                ⚠️ Sandbox é GRÁTIS mas só funciona com números que enviaram "join". Para produção, configure um número próprio aprovado pelo WhatsApp.
+                            </p>
                         </div>
 
                         <div class="form-field">
@@ -322,9 +327,14 @@
                         </div>
 
                         <div class="form-field">
-                            <label for="twilioWhatsappNumber">Número WhatsApp *</label>
-                            <input type="tel" id="twilioWhatsappNumber" name="twilioWhatsappNumber" placeholder="+14155238886">
-                            <small>Para testes use: whatsapp:+14155238886</small>
+                            <label for="twilioWhatsappNumber">Número WhatsApp (From) *</label>
+                            <input type="tel" id="twilioWhatsappNumber" name="twilioWhatsappNumber" placeholder="+14155238886" value="+14155238886">
+                            <small>
+                                <strong>🧪 Para TESTES (Sandbox):</strong> Use <code style="background: #fef3c7; padding: 2px 6px; border-radius: 3px; color: #92400e; font-weight: bold;">+14155238886</code><br>
+                                <strong>🚀 Para PRODUÇÃO:</strong> Use seu número próprio aprovado (ex: <code>+5527992285084</code>)<br>
+                                <br>
+                                <strong style="color: #dc2626;">⚠️ ATENÇÃO:</strong> Números brasileiros comuns (+55) NÃO funcionam sem aprovação do WhatsApp Business API!
+                            </small>
                         </div>
                     </div>
 

@@ -1904,25 +1904,44 @@ def test_whatsapp():
         data = request.get_json()
         phone = data.get('phone')
         
+        current_app.logger.info(f'Teste WhatsApp - Telefone: {phone}')
+        current_app.logger.info(f'WhatsApp Enabled: {WhatsAppService.is_enabled()}')
+        current_app.logger.info(f'WhatsApp Provider: {WhatsAppService.get_provider()}')
+        
         if not phone:
             return jsonify({
                 'success': False,
                 'message': 'Número de telefone é obrigatório'
             }), 400
         
+        # Verifica se está habilitado
+        if not WhatsAppService.is_enabled():
+            return jsonify({
+                'success': False,
+                'message': 'WhatsApp não está habilitado. Configure e habilite na página de configuração.'
+            }), 400
+        
         result = WhatsAppService.send_test_message(phone)
         
+        current_app.logger.info(f'Resultado do teste: {result}')
+        
+        # Adiciona detalhes formatados na mensagem se houver
+        if not result['success'] and 'details' in result:
+            result['message'] = f"{result['message']}\n\nDetalhes: {result['details']}"
+        
         if result['success']:
-            return jsonify(result)
+            return jsonify(result), 200
         else:
             return jsonify(result), 400
             
     except Exception as e:
-        current_app.logger.error(f'Erro ao enviar teste WhatsApp: {str(e)}')
+        import traceback
+        error_details = traceback.format_exc()
+        current_app.logger.error(f'Erro ao enviar teste WhatsApp: {str(e)}\n{error_details}')
         return jsonify({
             'success': False,
             'message': f'Erro ao enviar teste: {str(e)}'
-        }), 400
+        }), 500
 
 @main.route('/admin/whatsapp/status')
 @admin_required

@@ -61,8 +61,13 @@ class WhatsAppService:
         return '+' + phone
     
     @staticmethod
-    def send_message_twilio(to: str, message: str) -> bool:
-        """Envia mensagem via Twilio WhatsApp API"""
+    def send_message_twilio(to: str, message: str) -> dict:
+        """
+        Envia mensagem via Twilio WhatsApp API
+        
+        Returns:
+            dict: {'success': bool, 'message': str, 'details': str (opcional)}
+        """
         try:
             account_sid = WhatsAppService._get_config_value('TWILIO_ACCOUNT_SID')
             auth_token = WhatsAppService._get_config_value('TWILIO_AUTH_TOKEN')
@@ -70,7 +75,27 @@ class WhatsAppService:
             
             if not all([account_sid, auth_token, from_number]):
                 logger.error('Credenciais Twilio não configuradas')
-                return False
+                return {
+                    'success': False,
+                    'message': 'Credenciais Twilio incompletas. Verifique Account SID, Auth Token e Número.',
+                    'details': f'SID: {"✓" if account_sid else "✗"}, Token: {"✓" if auth_token else "✗"}, Número: {"✗" if not from_number else from_number}'
+                }
+            
+            # Valida código do país
+            if not from_number.startswith('+'):
+                from_number = '+' + from_number
+            
+            # Verifica se é o número do sandbox do Twilio
+            is_sandbox = from_number.startswith('+1415')  # Twilio sandbox number
+            
+            if not is_sandbox:
+                # Alerta se parece código errado (ex: +27 ao invés de +55)
+                country_code = from_number[1:3]
+                if country_code not in ['14', '55']:  # Números USA ou Brasil
+                    logger.warning(f'Código do país suspeito: {country_code}. Brasil deve usar +55')
+                
+                # Aviso importante sobre número não ser sandbox
+                logger.warning(f'Usando número próprio {from_number}. Certifique-se de que está aprovado pelo WhatsApp Business API.')
             
             url = f'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json'
             
@@ -80,6 +105,8 @@ class WhatsAppService:
                 'Body': message
             }
             
+            logger.info(f'Enviando WhatsApp Twilio: De {from_number} para {to}')
+            
             response = requests.post(
                 url,
                 data=data,
@@ -88,14 +115,45 @@ class WhatsAppService:
             
             if response.status_code == 201:
                 logger.info(f'WhatsApp enviado via Twilio para {to}')
-                return True
+                return {'success': True, 'message': f'Mensagem enviada com sucesso para {to}!'}
             else:
-                logger.error(f'Erro Twilio: {response.status_code} - {response.text}')
-                return False
+                error_msg = response.text
+                logger.error(f'Erro Twilio: {response.status_code} - {error_msg}')
+                
+                # Parse do erro do Twilio
+                try:
+                    import json
+                    error_json = json.loads(error_msg)
+                    error_detail = error_json.get('message', error_msg)
+                    
+                    # Mensagem específica para erro de Channel não encontrado
+                    if 'Channel' in error_detail and 'From address' in error_detail:
+                        error_detail = (
+                            f"❌ Número {from_number} não está registrado no Twilio.\n\n"
+                            "📋 Soluções:\n"
+                            "1. Para TESTES: Use o Twilio Sandbox (+14155238886)\n"
+                            "   • Acesse: https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn\n"
+                            "   • Envie mensagem do seu WhatsApp para ativar\n\n"
+                            "2. Para PRODUÇÃO: Configure um número próprio\n"
+                            "   • Vá em: Messaging > Try it out > Send a WhatsApp message\n"
+                            "   • Siga o processo de aprovação do WhatsApp Business"
+                        )
+                except:
+                    error_detail = error_msg
+                
+                return {
+                    'success': False,
+                    'message': f'Erro ao enviar via Twilio (código {response.status_code})',
+                    'details': error_detail
+                }
                 
         except Exception as e:
             logger.error(f'Erro ao enviar WhatsApp via Twilio: {str(e)}')
-            return False
+            return {
+                'success': False,
+                'message': f'Erro de sistema: {str(e)}',
+                'details': 'Verifique os logs do servidor'
+            }
     
     @staticmethod
     def send_message_messagebird(to: str, message: str) -> bool:
@@ -187,18 +245,33 @@ class WhatsAppService:
             message: Texto da mensagem
             
         Returns:
-            bool: True se enviado com sucesso
+            bool: True se enviado com sucesso (retrocompatibilidade)
+        """
+        result = WhatsAppService.send_message_detailed(to, message)
+        return result['success'] if isinstance(result, dict) else result
+    
+    @staticmethod
+    def send_message_detailed(to: str, message: str) -> dict:
+        """
+        Envia mensagem via WhatsApp usando o provedor configurado (versão com detalhes)
+        
+        Args:
+            to: Número de telefone no formato internacional (+5511999999999)
+            message: Texto da mensagem
+            
+        Returns:
+            dict: {'success': bool, 'message': str, 'details': str (opcional)}
         """
         if not WhatsAppService.is_enabled():
             logger.info('WhatsApp desabilitado')
-            return False
+            return {'success': False, 'message': 'WhatsApp não está habilitado'}
         
         # Formata o número
         formatted_phone = WhatsAppService.format_phone(to)
         
         if not formatted_phone:
             logger.error('Número de telefone inválido')
-            return False
+            return {'success': False, 'message': 'Número de telefone inválido'}
         
         # Determina o provedor e envia
         provider = WhatsAppService.get_provider()
@@ -206,12 +279,14 @@ class WhatsAppService:
         if provider == 'twilio':
             return WhatsAppService.send_message_twilio(formatted_phone, message)
         elif provider == 'messagebird':
-            return WhatsAppService.send_message_messagebird(formatted_phone, message)
+            result = WhatsAppService.send_message_messagebird(formatted_phone, message)
+            return {'success': result, 'message': 'Enviado com sucesso' if result else 'Erro ao enviar'}
         elif provider == 'meta':
-            return WhatsAppService.send_message_meta(formatted_phone, message)
+            result = WhatsAppService.send_message_meta(formatted_phone, message)
+            return {'success': result, 'message': 'Enviado com sucesso' if result else 'Erro ao enviar'}
         else:
             logger.error(f'Provedor desconhecido: {provider}')
-            return False
+            return {'success': False, 'message': f'Provedor desconhecido: {provider}'}
     
     @staticmethod
     def send_loan_confirmation(emprestimo) -> bool:
@@ -334,7 +409,7 @@ Entre em contato com o TI imediatamente.
         Envia mensagem de teste
         
         Returns:
-            dict: {'success': bool, 'message': str}
+            dict: {'success': bool, 'message': str, 'details': str (opcional)}
         """
         message = """
 🧪 *Teste de Mensagem - Inventário TI*
@@ -346,15 +421,11 @@ Se você recebeu esta mensagem, o sistema está configurado corretamente! ✅
 Sistema de Inventário de Equipamentos TI
 """
         
-        success = WhatsAppService.send_message(phone, message)
+        # Usa o método detalhado para obter informações completas
+        result = WhatsAppService.send_message_detailed(phone, message)
         
-        if success:
-            return {
-                'success': True,
-                'message': 'Mensagem de teste enviada com sucesso!'
-            }
-        else:
-            return {
-                'success': False,
-                'message': 'Erro ao enviar mensagem de teste. Verifique as configurações.'
-            }
+        # Se sucesso, personaliza a mensagem
+        if result['success']:
+            result['message'] = 'Mensagem de teste enviada com sucesso! Verifique seu WhatsApp.'
+        
+        return result
