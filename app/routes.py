@@ -49,6 +49,25 @@ def debug_config():
         'app_database_uri': current_app.config.get('SQLALCHEMY_DATABASE_URI', '').split('@')[1] if '@' in current_app.config.get('SQLALCHEMY_DATABASE_URI', '') else 'NOT CONFIGURED'
     })
 
+@main.route('/debug/db')
+def debug_db():
+    """Rota de diagnóstico para testar conexão com o banco"""
+    from app.models import db, Usuario
+    info = {
+        'can_connect': False,
+        'error': None,
+        'count_usuarios': None,
+    }
+    try:
+        # Testa uma query simples
+        count = db.session.execute(db.select(db.func.count(Usuario.id))).scalar()
+        info['can_connect'] = True
+        info['count_usuarios'] = int(count or 0)
+        return jsonify({'success': True, 'db': info})
+    except Exception as e:
+        info['error'] = str(e)
+        return jsonify({'success': False, 'db': info}), 503
+
 # Decorator para verificar se usuário é admin
 def admin_required(f):
     @wraps(f)
