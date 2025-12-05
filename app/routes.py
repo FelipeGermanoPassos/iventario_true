@@ -1229,22 +1229,29 @@ def emprestimos_notificacoes():
     try:
         dias_alerta = int(request.args.get('dias', 3))  # Padrão: 3 dias antes
         hoje = datetime.utcnow().date()
-        data_limite = hoje + datetime.timedelta(days=dias_alerta)
+        data_limite = hoje + timedelta(days=dias_alerta)
+        
+        # Busca todos os empréstimos
+        emprestimos_all = Emprestimo.get_all()
         
         # Empréstimos ativos próximos ao vencimento (dentro dos próximos N dias)
-        proximos_vencimento = Emprestimo.query.filter(
-            Emprestimo.status == 'Ativo',
-            Emprestimo.data_devolucao_prevista.isnot(None),
-            Emprestimo.data_devolucao_prevista > hoje,
-            Emprestimo.data_devolucao_prevista <= data_limite
-        ).order_by(Emprestimo.data_devolucao_prevista).all()
+        proximos_vencimento = [
+            emp for emp in emprestimos_all
+            if emp.status == 'Ativo'
+            and emp.data_devolucao_prevista
+            and emp.data_devolucao_prevista > str(hoje)
+            and emp.data_devolucao_prevista <= str(data_limite)
+        ]
+        proximos_vencimento.sort(key=lambda e: e.data_devolucao_prevista)
         
         # Empréstimos atrasados (data prevista já passou)
-        atrasados = Emprestimo.query.filter(
-            Emprestimo.status == 'Ativo',
-            Emprestimo.data_devolucao_prevista.isnot(None),
-            Emprestimo.data_devolucao_prevista < hoje
-        ).order_by(Emprestimo.data_devolucao_prevista).all()
+        atrasados = [
+            emp for emp in emprestimos_all
+            if emp.status == 'Ativo'
+            and emp.data_devolucao_prevista
+            and emp.data_devolucao_prevista < str(hoje)
+        ]
+        atrasados.sort(key=lambda e: e.data_devolucao_prevista)
         
         return jsonify({
             'success': True,
@@ -1253,6 +1260,7 @@ def emprestimos_notificacoes():
             'total_notificacoes': len(proximos_vencimento) + len(atrasados)
         })
     except Exception as e:
+        current_app.logger.error(f'Erro ao buscar notificações: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao buscar notificações: {str(e)}'
@@ -1276,52 +1284,69 @@ def relatorios_emprestimos():
         data_fim = request.args.get('data_fim')
         departamento = request.args.get('departamento')
         
-        # Query base com join para trazer equipamento junto
-        query = Emprestimo.query.join(Equipamento, Emprestimo.equipamento_id == Equipamento.id)
+        # Buscar todos os empréstimos
+        emprestimos = Emprestimo.get_all()
         
         # Aplicar filtros
         if filtro == 'ativos':
-            query = query.filter(Emprestimo.status == 'Ativo')
+            emprestimos = [e for e in emprestimos if e.status == 'Ativo']
         elif filtro == 'historico':
-            query = query.filter(Emprestimo.status == 'Devolvido')
+            emprestimos = [e for e in emprestimos if e.status == 'Devolvido']
         elif filtro == 'atrasados':
             hoje = datetime.utcnow().date()
-            query = query.filter(
-                Emprestimo.status == 'Ativo',
-                Emprestimo.data_devolucao_prevista < hoje
-            )
+            emprestimos = [
+                e for e in emprestimos
+                if e.status == 'Ativo' and e.data_devolucao_prevista and str(e.data_devolucao_prevista) < str(hoje)
+            ]
         
         # Filtro por período
         if data_inicio:
-            data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
-            query = query.filter(Emprestimo.data_emprestimo >= data_inicio_dt)
+            try:
+                data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+                emprestimos = [e for e in emprestimos if e.data_emprestimo and str(e.data_emprestimo) >= str(data_inicio_dt)]
+            except:
+                pass
         
         if data_fim:
-            data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d')
-            # Adiciona 23:59:59 para incluir todo o dia
-            data_fim_dt = data_fim_dt.replace(hour=23, minute=59, second=59)
-            query = query.filter(Emprestimo.data_emprestimo <= data_fim_dt)
+            try:
+                data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d').date()
+                emprestimos = [e for e in emprestimos if e.data_emprestimo and str(e.data_emprestimo) <= str(data_fim_dt)]
+            except:
+                pass
         
         # Filtro por departamento
         if departamento and departamento != 'todos':
-            query = query.filter(Emprestimo.departamento == departamento)
+            emprestimos = [e for e in emprestimos if e.departamento == departamento]
         
         # Ordenar por data de empréstimo (mais recentes primeiro)
-        emprestimos = query.order_by(Emprestimo.data_emprestimo.desc()).all()
+        emprestimos.sort(key=lambda e: e.data_emprestimo or '', reverse=True)
         
         # Calcular estatísticas
         hoje = datetime.utcnow().date()
         total_emprestimos = len(emprestimos)
         ativos = sum(1 for e in emprestimos if e.status == 'Ativo')
         devolvidos = sum(1 for e in emprestimos if e.status == 'Devolvido')
-        atrasados = sum(1 for e in emprestimos if e.status == 'Ativo' and e.data_devolucao_prevista and e.data_devolucao_prevista < hoje)
+        atrasados = sum(1 for e in emprestimos if e.status == 'Ativo' and e.data_devolucao_prevista and str(e.data_devolucao_prevista) < str(hoje))
         
         # Calcular duração média dos empréstimos devolvidos
         duracoes = []
         for e in emprestimos:
-            if e.status == 'Devolvido' and e.data_devolucao_real:
-                duracao = (e.data_devolucao_real - e.data_emprestimo).days
-                duracoes.append(duracao)
+            if e.status == 'Devolvido' and e.data_devolucao_real and e.data_emprestimo:
+                try:
+                    if isinstance(e.data_devolucao_real, str):
+                        data_dev_real = datetime.strptime(e.data_devolucao_real, '%Y-%m-%d').date()
+                    else:
+                        data_dev_real = e.data_devolucao_real
+                    
+                    if isinstance(e.data_emprestimo, str):
+                        data_emp = datetime.strptime(e.data_emprestimo, '%Y-%m-%d').date()
+                    else:
+                        data_emp = e.data_emprestimo
+                    
+                    duracao = (data_dev_real - data_emp).days
+                    duracoes.append(duracao)
+                except:
+                    pass
         
         duracao_media = sum(duracoes) / len(duracoes) if duracoes else 0
         
@@ -1334,9 +1359,12 @@ def relatorios_emprestimos():
         # Equipamentos mais emprestados
         equipamentos_count = {}
         for e in emprestimos:
-            if e.equipamento:
-                nome = e.equipamento.nome
-                equipamentos_count[nome] = equipamentos_count.get(nome, 0) + 1
+            if e.equipamento_id:
+                # Buscar nome do equipamento
+                equip = Equipamento.get_by_id(e.equipamento_id)
+                if equip and equip.nome:
+                    nome = equip.nome
+                    equipamentos_count[nome] = equipamentos_count.get(nome, 0) + 1
         
         # Top 10 equipamentos
         top_equipamentos = sorted(equipamentos_count.items(), key=lambda x: x[1], reverse=True)[:10]
@@ -1356,9 +1384,7 @@ def relatorios_emprestimos():
         })
         
     except Exception as e:
-        print(f"Erro ao gerar relatório: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        current_app.logger.error(f'Erro ao gerar relatório: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao gerar relatório: {str(e)}'
@@ -1369,16 +1395,23 @@ def relatorios_emprestimos():
 def listar_departamentos():
     """Lista todos os departamentos únicos dos empréstimos"""
     try:
-        departamentos = db.session.query(Emprestimo.departamento).distinct().filter(
-            Emprestimo.departamento.isnot(None),
-            Emprestimo.departamento != ''
-        ).order_by(Emprestimo.departamento).all()
+        emprestimos = Emprestimo.get_all()
+        
+        # Extrair departamentos únicos e válidos
+        departamentos = set()
+        for e in emprestimos:
+            if e.departamento and e.departamento.strip():
+                departamentos.add(e.departamento)
+        
+        # Ordenar alfabeticamente
+        departamentos = sorted(list(departamentos))
         
         return jsonify({
             'success': True,
-            'departamentos': [d[0] for d in departamentos]
+            'departamentos': departamentos
         })
     except Exception as e:
+        current_app.logger.error(f'Erro ao listar departamentos: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao listar departamentos: {str(e)}'
@@ -1409,41 +1442,46 @@ def exportar_relatorio_pdf():
         data_fim = request.args.get('data_fim')
         departamento = request.args.get('departamento')
         
-        # Query base com join
-        query = Emprestimo.query.join(Equipamento, Emprestimo.equipamento_id == Equipamento.id)
+        # Buscar todos os empréstimos
+        emprestimos = Emprestimo.get_all()
         
         # Aplicar filtros
         if filtro == 'ativos':
-            query = query.filter(Emprestimo.status == 'Ativo')
+            emprestimos = [e for e in emprestimos if e.status == 'Ativo']
         elif filtro == 'historico':
-            query = query.filter(Emprestimo.status == 'Devolvido')
+            emprestimos = [e for e in emprestimos if e.status == 'Devolvido']
         elif filtro == 'atrasados':
             hoje = datetime.utcnow().date()
-            query = query.filter(
-                Emprestimo.status == 'Ativo',
-                Emprestimo.data_devolucao_prevista < hoje
-            )
+            emprestimos = [
+                e for e in emprestimos
+                if e.status == 'Ativo' and e.data_devolucao_prevista and str(e.data_devolucao_prevista) < str(hoje)
+            ]
         
         if data_inicio:
-            data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
-            query = query.filter(Emprestimo.data_emprestimo >= data_inicio_dt)
+            try:
+                data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+                emprestimos = [e for e in emprestimos if e.data_emprestimo and str(e.data_emprestimo) >= str(data_inicio_dt)]
+            except:
+                pass
         
         if data_fim:
-            data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d')
-            data_fim_dt = data_fim_dt.replace(hour=23, minute=59, second=59)
-            query = query.filter(Emprestimo.data_emprestimo <= data_fim_dt)
+            try:
+                data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d').date()
+                emprestimos = [e for e in emprestimos if e.data_emprestimo and str(e.data_emprestimo) <= str(data_fim_dt)]
+            except:
+                pass
         
         if departamento and departamento != 'todos':
-            query = query.filter(Emprestimo.departamento == departamento)
+            emprestimos = [e for e in emprestimos if e.departamento == departamento]
         
-        emprestimos = query.order_by(Emprestimo.data_emprestimo.desc()).all()
+        emprestimos.sort(key=lambda e: e.data_emprestimo or '', reverse=True)
         
         # Calcular estatísticas
         hoje = datetime.utcnow().date()
         total = len(emprestimos)
         ativos = sum(1 for e in emprestimos if e.status == 'Ativo')
         devolvidos = sum(1 for e in emprestimos if e.status == 'Devolvido')
-        atrasados = sum(1 for e in emprestimos if e.status == 'Ativo' and e.data_devolucao_prevista and e.data_devolucao_prevista < hoje)
+        atrasados = sum(1 for e in emprestimos if e.status == 'Ativo' and e.data_devolucao_prevista and str(e.data_devolucao_prevista) < str(hoje))
         
         # Criar PDF
         buffer = BytesIO()
@@ -1531,25 +1569,61 @@ def exportar_relatorio_pdf():
             
             # Dados
             for e in emprestimos:
-                equipamento_nome = e.equipamento.nome if e.equipamento else 'N/A'
-                data_emp = e.data_emprestimo.strftime('%d/%m/%Y')
-                prev_dev = e.data_devolucao_prevista.strftime('%d/%m/%Y') if e.data_devolucao_prevista else '-'
+                try:
+                    equip = Equipamento.get_by_id(e.equipamento_id) if e.equipamento_id else None
+                    equipamento_nome = equip.nome if equip else 'N/A'
+                except:
+                    equipamento_nome = 'N/A'
+                
+                # Parse dates
+                try:
+                    if isinstance(e.data_emprestimo, str):
+                        data_emp_obj = datetime.strptime(e.data_emprestimo, '%Y-%m-%d').date()
+                    else:
+                        data_emp_obj = e.data_emprestimo
+                    data_emp = data_emp_obj.strftime('%d/%m/%Y')
+                except:
+                    data_emp = 'N/A'
+                
+                # Prev dev
+                try:
+                    if e.data_devolucao_prevista:
+                        if isinstance(e.data_devolucao_prevista, str):
+                            prev_dev = datetime.strptime(e.data_devolucao_prevista, '%Y-%m-%d').strftime('%d/%m/%Y')
+                        else:
+                            prev_dev = e.data_devolucao_prevista.strftime('%d/%m/%Y')
+                    else:
+                        prev_dev = '-'
+                except:
+                    prev_dev = '-'
                 
                 # Status
-                is_atrasado = e.status == 'Ativo' and e.data_devolucao_prevista and e.data_devolucao_prevista < hoje
+                is_atrasado = e.status == 'Ativo' and e.data_devolucao_prevista and str(e.data_devolucao_prevista) < str(hoje)
                 status_text = 'Atrasado' if is_atrasado else e.status
                 
                 # Dias
-                if e.status == 'Ativo':
-                    dias = (datetime.utcnow().date() - e.data_emprestimo.date()).days
-                elif e.data_devolucao_real:
-                    dias = (e.data_devolucao_real.date() - e.data_emprestimo.date()).days
-                else:
+                try:
+                    if isinstance(e.data_emprestimo, str):
+                        data_emp_date = datetime.strptime(e.data_emprestimo, '%Y-%m-%d').date()
+                    else:
+                        data_emp_date = e.data_emprestimo
+                    
+                    if e.status == 'Ativo':
+                        dias = (datetime.utcnow().date() - data_emp_date).days
+                    elif e.data_devolucao_real:
+                        if isinstance(e.data_devolucao_real, str):
+                            data_dev_date = datetime.strptime(e.data_devolucao_real, '%Y-%m-%d').date()
+                        else:
+                            data_dev_date = e.data_devolucao_real
+                        dias = (data_dev_date - data_emp_date).days
+                    else:
+                        dias = '-'
+                except:
                     dias = '-'
                 
                 table_data.append([
                     equipamento_nome[:25],
-                    e.responsavel[:20],
+                    (e.responsavel or 'N/A')[:20],
                     (e.departamento or '-')[:15],
                     data_emp,
                     prev_dev,
@@ -1578,7 +1652,7 @@ def exportar_relatorio_pdf():
             
             # Destacar linhas atrasadas
             for i, e in enumerate(emprestimos, 1):
-                is_atrasado = e.status == 'Ativo' and e.data_devolucao_prevista and e.data_devolucao_prevista < hoje
+                is_atrasado = e.status == 'Ativo' and e.data_devolucao_prevista and str(e.data_devolucao_prevista) < str(hoje)
                 if is_atrasado:
                     table_style.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor('#fee2e2')))
             
@@ -1612,9 +1686,7 @@ def exportar_relatorio_pdf():
         return response
         
     except Exception as e:
-        print(f"Erro ao gerar PDF: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        current_app.logger.error(f'Erro ao gerar PDF: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao gerar PDF: {str(e)}'
@@ -1641,42 +1713,40 @@ def dashboard_executivo_dados():
         # ========== MÉTRICAS DE INVENTÁRIO ==========
         
         # Total de equipamentos e valor total
-        equipamentos = Equipamento.query.all()
+        equipamentos = Equipamento.get_all()
         total_equipamentos = len(equipamentos)
-        valor_total_inventario = sum([eq.valor or 0 for eq in equipamentos])
+        valor_total_inventario = sum([eq.get('valor') or 0 for eq in [e.to_dict() for e in equipamentos]])
         valor_medio_equipamento = valor_total_inventario / total_equipamentos if total_equipamentos > 0 else 0
         
         # Equipamentos por departamento (baseado no empréstimo ativo ou último empréstimo)
         equipamentos_por_dept = {}
         valor_por_dept = {}
+        emprestimos_all = Emprestimo.get_all()
+        
         for eq in equipamentos:
+            eq_dict = eq.to_dict()
             # Busca o departamento do empréstimo ativo ou do último empréstimo
             dept = None
-            emprestimo_ativo = Emprestimo.query.filter_by(
-                equipamento_id=eq.id,
-                status='Ativo'
-            ).first()
+            emprestimos_eq = [e for e in emprestimos_all if e.equipamento_id == eq_dict['id']]
             
+            emprestimo_ativo = next((e for e in emprestimos_eq if e.status == 'Ativo'), None)
             if emprestimo_ativo:
                 dept = emprestimo_ativo.departamento
             else:
                 # Se não tem empréstimo ativo, busca o último empréstimo
-                ultimo_emprestimo = Emprestimo.query.filter_by(
-                    equipamento_id=eq.id
-                ).order_by(Emprestimo.data_emprestimo.desc()).first()
-                
-                if ultimo_emprestimo:
-                    dept = ultimo_emprestimo.departamento
+                if emprestimos_eq:
+                    emprestimos_eq.sort(key=lambda e: e.data_emprestimo or '', reverse=True)
+                    dept = emprestimos_eq[0].departamento
                 else:
                     # Fallback: usa o departamento_atual do equipamento
-                    dept = eq.departamento_atual
+                    dept = eq_dict.get('departamento_atual')
             
             dept = dept or 'Não Atribuído'
             equipamentos_por_dept[dept] = equipamentos_por_dept.get(dept, 0) + 1
-            valor_por_dept[dept] = valor_por_dept.get(dept, 0) + (eq.valor or 0)
+            valor_por_dept[dept] = valor_por_dept.get(dept, 0) + (eq_dict.get('valor') or 0)
         
         # Custo total de manutenções
-        manutencoes = Manutencao.query.all()
+        manutencoes = Manutencao.get_all()
         custo_total_manutencoes = sum([m.custo or 0 for m in manutencoes])
         manutencoes_pendentes = sum([1 for m in manutencoes if m.status == 'Agendada'])
         
@@ -1692,13 +1762,14 @@ def dashboard_executivo_dados():
         top_manutencoes = sorted(manutencoes_por_equipamento.items(), key=lambda x: x[1], reverse=True)[:5]
         equipamentos_problematicos = []
         for eq_id, qtd in top_manutencoes:
-            eq = Equipamento.query.get(eq_id)
+            eq = Equipamento.get_by_id(eq_id)
             if eq:
+                eq_dict = eq.to_dict()
                 equipamentos_problematicos.append({
-                    'nome': eq.nome,
-                    'tipo': eq.tipo,
-                    'marca': eq.marca,
-                    'modelo': eq.modelo,
+                    'nome': eq_dict.get('nome'),
+                    'tipo': eq_dict.get('tipo'),
+                    'marca': eq_dict.get('marca'),
+                    'modelo': eq_dict.get('modelo'),
                     'quantidade_manutencoes': qtd,
                     'custo_total': custo_manutencao_por_equipamento.get(eq_id, 0)
                 })
@@ -1706,9 +1777,8 @@ def dashboard_executivo_dados():
         # ========== MÉTRICAS DE UTILIZAÇÃO ==========
         
         # Empréstimos
-        emprestimos = Emprestimo.query.all()
-        emprestimos_ativos = [e for e in emprestimos if e.status == 'Ativo']
-        emprestimos_devolvidos = [e for e in emprestimos if e.status == 'Devolvido']
+        emprestimos_ativos = [e for e in emprestimos_all if e.status == 'Ativo']
+        emprestimos_devolvidos = [e for e in emprestimos_all if e.status == 'Devolvido']
         
         # Taxa de utilização
         equipamentos_em_uso = len(emprestimos_ativos)
@@ -1724,9 +1794,22 @@ def dashboard_executivo_dados():
                 emprestimos_por_dept[dept] = []
             
             # Calcular duração
-            if e.data_devolucao_real:
-                duracao = (e.data_devolucao_real - e.data_emprestimo).days
-                emprestimos_por_dept[dept].append(duracao)
+            if e.data_devolucao_real and e.data_emprestimo:
+                try:
+                    if isinstance(e.data_devolucao_real, str):
+                        data_dev = datetime.strptime(e.data_devolucao_real, '%Y-%m-%d').date()
+                    else:
+                        data_dev = e.data_devolucao_real
+                    
+                    if isinstance(e.data_emprestimo, str):
+                        data_emp = datetime.strptime(e.data_emprestimo, '%Y-%m-%d').date()
+                    else:
+                        data_emp = e.data_emprestimo
+                    
+                    duracao = (data_dev - data_emp).days
+                    emprestimos_por_dept[dept].append(duracao)
+                except:
+                    pass
         
         # Calcular tempo médio por departamento
         for dept, duracoes in emprestimos_por_dept.items():
@@ -1741,35 +1824,61 @@ def dashboard_executivo_dados():
         equipamentos_com_valor = [eq for eq in equipamentos if eq.valor and eq.valor > 0]
         
         for eq in equipamentos_com_valor:
+            eq_dict = eq.to_dict()
             # Contar dias de empréstimo
-            emprestimos_eq = [e for e in emprestimos if e.equipamento_id == eq.id and e.status == 'Devolvido']
-            dias_uso = sum([(e.data_devolucao_real - e.data_emprestimo).days for e in emprestimos_eq if e.data_devolucao_real])
+            emprestimos_eq = [e for e in emprestimos_all if e.equipamento_id == eq_dict['id'] and e.status == 'Devolvido']
+            dias_uso = 0
+            for emp in emprestimos_eq:
+                try:
+                    if isinstance(emp.data_devolucao_real, str):
+                        data_dev = datetime.strptime(emp.data_devolucao_real, '%Y-%m-%d').date()
+                    else:
+                        data_dev = emp.data_devolucao_real
+                    
+                    if isinstance(emp.data_emprestimo, str):
+                        data_emp = datetime.strptime(emp.data_emprestimo, '%Y-%m-%d').date()
+                    else:
+                        data_emp = emp.data_emprestimo
+                    
+                    dias_uso += max((data_dev - data_emp).days, 0)
+                except:
+                    pass
             
             # Custo de manutenção deste equipamento
-            custo_manutencao = custo_manutencao_por_equipamento.get(eq.id, 0)
+            custo_manutencao = custo_manutencao_por_equipamento.get(eq_dict['id'], 0)
             
             # Valor depreciado (método linear)
-            vida_util_anos = eq.vida_util_anos or 5
-            if eq.data_aquisicao:
-                idade_anos = (hoje - eq.data_aquisicao).days / 365.25
-                taxa_depreciacao = min(idade_anos / vida_util_anos, 1.0)  # Máximo 100%
-                valor_residual = eq.valor * (1 - taxa_depreciacao)
+            vida_util_anos = eq_dict.get('vida_util_anos') or 5
+            data_aquisicao = eq_dict.get('data_aquisicao')
+            if data_aquisicao:
+                try:
+                    if isinstance(data_aquisicao, str):
+                        data_aquisicao_obj = datetime.strptime(data_aquisicao, '%Y-%m-%d').date()
+                    else:
+                        data_aquisicao_obj = data_aquisicao
+                    
+                    idade_anos = (hoje - data_aquisicao_obj).days / 365.25
+                    taxa_depreciacao = min(idade_anos / vida_util_anos, 1.0)  # Máximo 100%
+                    valor_residual = eq_dict.get('valor') * (1 - taxa_depreciacao)
+                except:
+                    valor_residual = eq_dict.get('valor')
+                    idade_anos = 0
             else:
-                valor_residual = eq.valor
+                valor_residual = eq_dict.get('valor')
                 idade_anos = 0
             
             # Cálculo simplificado de ROI
             # Considerando que cada dia de uso vale 0.3% do valor do equipamento
-            valor_gerado = (eq.valor * 0.003) * dias_uso
-            custo_total = eq.valor + custo_manutencao
+            valor_gerado = (eq_dict.get('valor') * 0.003) * dias_uso
+            custo_total = eq_dict.get('valor') + custo_manutencao
             roi_percentual = ((valor_gerado - custo_total) / custo_total * 100) if custo_total > 0 else 0
             
             roi_por_equipamento.append({
-                'nome': eq.nome,
-                'tipo': eq.tipo,
-                'marca': eq.marca,
-                'modelo': eq.modelo,
-                'valor_aquisicao': eq.valor,
+                'nome': eq_dict.get('nome'),
+                'tipo': eq_dict.get('tipo'),
+                'marca': eq_dict.get('marca'),
+                'modelo': eq_dict.get('modelo'),
+                'valor_aquisicao': eq_dict.get('valor'),
                 'valor_residual': round(valor_residual, 2),
                 'dias_uso': dias_uso,
                 'custo_manutencao': custo_manutencao,
@@ -1791,10 +1900,18 @@ def dashboard_executivo_dados():
             mes_key = mes.strftime('%Y-%m')
             emprestimos_por_mes[mes_key] = 0
         
-        for e in emprestimos:
-            mes_key = e.data_emprestimo.strftime('%Y-%m')
-            if mes_key in emprestimos_por_mes:
-                emprestimos_por_mes[mes_key] += 1
+        for e in emprestimos_all:
+            try:
+                if isinstance(e.data_emprestimo, str):
+                    data_emp_obj = datetime.strptime(e.data_emprestimo, '%Y-%m-%d').date()
+                else:
+                    data_emp_obj = e.data_emprestimo
+                
+                mes_key = data_emp_obj.strftime('%Y-%m')
+                if mes_key in emprestimos_por_mes:
+                    emprestimos_por_mes[mes_key] += 1
+            except:
+                pass
         
         # Ordenar por data
         emprestimos_por_mes_ordenado = dict(sorted(emprestimos_por_mes.items()))
@@ -1808,9 +1925,17 @@ def dashboard_executivo_dados():
         
         for m in manutencoes:
             if m.data_inicio:
-                mes_key = m.data_inicio.strftime('%Y-%m')
-                if mes_key in custos_por_mes:
-                    custos_por_mes[mes_key] += (m.custo or 0)
+                try:
+                    if isinstance(m.data_inicio, str):
+                        data_inicio_obj = datetime.strptime(m.data_inicio, '%Y-%m-%d').date()
+                    else:
+                        data_inicio_obj = m.data_inicio
+                    
+                    mes_key = data_inicio_obj.strftime('%Y-%m')
+                    if mes_key in custos_por_mes:
+                        custos_por_mes[mes_key] += (m.custo or 0)
+                except:
+                    pass
         
         custos_por_mes_ordenado = dict(sorted(custos_por_mes.items()))
         
@@ -1853,13 +1978,11 @@ def dashboard_executivo_dados():
                 'bottom_10': bottom_roi,
                 'roi_medio': round(sum([r['roi_percentual'] for r in roi_por_equipamento]) / len(roi_por_equipamento), 2) if roi_por_equipamento else 0
             },
-            'analise_uso': analisar_uso_equipamentos(equipamentos, emprestimos)
+            'analise_uso': analisar_uso_equipamentos(equipamentos, emprestimos_all)
         })
         
     except Exception as e:
-        print(f"Erro ao gerar dados do dashboard executivo: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        current_app.logger.error(f'Erro ao gerar dados do dashboard executivo: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao gerar dados: {str(e)}'
@@ -1883,8 +2006,11 @@ def analisar_uso_equipamentos(equipamentos, emprestimos):
     periodo_analise_dias = 365  # Último ano
     
     for eq in equipamentos:
+        eq_dict = eq.to_dict()
+        eq_id = eq_dict.get('id')
+        
         # Buscar todos os empréstimos deste equipamento
-        emprestimos_eq = [e for e in emprestimos if e.equipamento_id == eq.id]
+        emprestimos_eq = [e for e in emprestimos if e.equipamento_id == eq_id]
         
         # Total de empréstimos
         total_emprestimos = len(emprestimos_eq)
@@ -1892,22 +2018,43 @@ def analisar_uso_equipamentos(equipamentos, emprestimos):
         # Calcular dias totais que o equipamento ficou emprestado
         dias_emprestado = 0
         for emp in emprestimos_eq:
-            if emp.data_devolucao_real:
-                # Empréstimo devolvido
-                duracao = (emp.data_devolucao_real - emp.data_emprestimo).days
-            elif emp.status == 'Ativo':
-                # Empréstimo ainda ativo
-                duracao = (hoje - emp.data_emprestimo).days
-            else:
-                duracao = 0
-            
-            dias_emprestado += max(duracao, 0)
+            try:
+                if isinstance(emp.data_devolucao_real, str):
+                    data_dev = datetime.strptime(emp.data_devolucao_real, '%Y-%m-%d')
+                else:
+                    data_dev = emp.data_devolucao_real if emp.data_devolucao_real else None
+                
+                if isinstance(emp.data_emprestimo, str):
+                    data_emp = datetime.strptime(emp.data_emprestimo, '%Y-%m-%d')
+                else:
+                    data_emp = emp.data_emprestimo
+                
+                if data_dev and data_emp:
+                    duracao = (data_dev - data_emp).days
+                elif emp.status == 'Ativo' and data_emp:
+                    # Empréstimo ainda ativo
+                    duracao = (hoje - data_emp).days
+                else:
+                    duracao = 0
+                
+                dias_emprestado += max(duracao, 0)
+            except:
+                pass
         
         # Taxa de ocupação (% do tempo que ficou emprestado)
         # Considerar desde a data de cadastro ou último ano
-        if eq.data_cadastro:
-            dias_desde_cadastro = (hoje - eq.data_cadastro).days
-            dias_base = min(dias_desde_cadastro, periodo_analise_dias)
+        data_cadastro = eq_dict.get('data_cadastro')
+        if data_cadastro:
+            try:
+                if isinstance(data_cadastro, str):
+                    data_cadastro_obj = datetime.strptime(data_cadastro, '%Y-%m-%d')
+                else:
+                    data_cadastro_obj = data_cadastro
+                
+                dias_desde_cadastro = (hoje - data_cadastro_obj).days
+                dias_base = min(dias_desde_cadastro, periodo_analise_dias)
+            except:
+                dias_base = periodo_analise_dias
         else:
             dias_base = periodo_analise_dias
         
@@ -1918,7 +2065,18 @@ def analisar_uso_equipamentos(equipamentos, emprestimos):
         
         # Empréstimos nos últimos 90 dias
         data_limite_recente = hoje - timedelta(days=90)
-        emprestimos_recentes = [e for e in emprestimos_eq if e.data_emprestimo >= data_limite_recente]
+        emprestimos_recentes = []
+        for e in emprestimos_eq:
+            try:
+                if isinstance(e.data_emprestimo, str):
+                    data_emp = datetime.strptime(e.data_emprestimo, '%Y-%m-%d')
+                else:
+                    data_emp = e.data_emprestimo
+                
+                if data_emp >= data_limite_recente:
+                    emprestimos_recentes.append(e)
+            except:
+                pass
         
         # Classificação de uso
         if taxa_ocupacao >= 60:
@@ -1941,19 +2099,19 @@ def analisar_uso_equipamentos(equipamentos, emprestimos):
             recomendacao = 'Alta demanda - considere adquirir similar'
         
         analise_por_equipamento.append({
-            'id': eq.id,
-            'nome': eq.nome,
-            'tipo': eq.tipo,
-            'marca': eq.marca,
-            'modelo': eq.modelo,
-            'status': eq.status,
+            'id': eq_id,
+            'nome': eq_dict.get('nome'),
+            'tipo': eq_dict.get('tipo'),
+            'marca': eq_dict.get('marca'),
+            'modelo': eq_dict.get('modelo'),
+            'status': eq_dict.get('status'),
             'total_emprestimos': total_emprestimos,
             'emprestimos_recentes': len(emprestimos_recentes),
             'dias_emprestado': dias_emprestado,
             'taxa_ocupacao': round(taxa_ocupacao, 1),
             'classificacao': classificacao,
             'recomendacao': recomendacao,
-            'valor': eq.valor or 0
+            'valor': eq_dict.get('valor') or 0
         })
     
     # Ordenar por taxa de ocupação
@@ -2251,8 +2409,6 @@ def get_vapid_public_key():
 def subscribe_push():
     """Salva uma nova subscrição de push notification"""
     try:
-        from app.models import PushSubscription
-        
         data = request.get_json()
         subscription = data.get('subscription')
         user_agent = data.get('userAgent', '')
@@ -2275,28 +2431,30 @@ def subscribe_push():
             }), 400
         
         # Verifica se já existe uma subscrição com esse endpoint
-        existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
+        subscriptions = PushSubscription.get_all()
+        existing = next((s for s in subscriptions if s.endpoint == endpoint), None)
         
         if existing:
             # Atualiza a subscrição existente
-            existing.usuario_id = current_user.id
-            existing.p256dh = p256dh
-            existing.auth = auth
-            existing.user_agent = user_agent
-            existing.ativa = True
-            existing.data_criacao = datetime.utcnow()
+            PushSubscription.update(existing.id, {
+                'usuario_id': current_user.id,
+                'p256dh': p256dh,
+                'auth': auth,
+                'user_agent': user_agent,
+                'ativa': True,
+                'data_criacao': datetime.utcnow().isoformat()
+            })
         else:
             # Cria nova subscrição
-            new_subscription = PushSubscription(
-                usuario_id=current_user.id,
-                endpoint=endpoint,
-                p256dh=p256dh,
-                auth=auth,
-                user_agent=user_agent
-            )
-            db.session.add(new_subscription)
-        
-        db.session.commit()
+            PushSubscription.create({
+                'usuario_id': current_user.id,
+                'endpoint': endpoint,
+                'p256dh': p256dh,
+                'auth': auth,
+                'user_agent': user_agent,
+                'ativa': True,
+                'data_criacao': datetime.utcnow().isoformat()
+            })
         
         return jsonify({
             'success': True,
@@ -2304,8 +2462,7 @@ def subscribe_push():
         })
         
     except Exception as e:
-        current_app.logger.error(f'Erro ao salvar subscrição: {str(e)}')
-        db.session.rollback()
+        current_app.logger.error(f'Erro ao salvar subscrição: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao salvar subscrição: {str(e)}'
@@ -2316,8 +2473,6 @@ def subscribe_push():
 def unsubscribe_push():
     """Remove uma subscrição de push notification"""
     try:
-        from app.models import PushSubscription
-        
         data = request.get_json()
         endpoint = data.get('endpoint')
         
@@ -2328,14 +2483,11 @@ def unsubscribe_push():
             }), 400
         
         # Busca e remove a subscrição
-        subscription = PushSubscription.query.filter_by(
-            endpoint=endpoint,
-            usuario_id=current_user.id
-        ).first()
+        subscriptions = PushSubscription.get_all()
+        subscription = next((s for s in subscriptions if s.endpoint == endpoint and s.usuario_id == current_user.id), None)
         
         if subscription:
-            db.session.delete(subscription)
-            db.session.commit()
+            subscription.delete()
             
             return jsonify({
                 'success': True,
@@ -2348,8 +2500,7 @@ def unsubscribe_push():
             }), 404
             
     except Exception as e:
-        current_app.logger.error(f'Erro ao remover subscrição: {str(e)}')
-        db.session.rollback()
+        current_app.logger.error(f'Erro ao remover subscrição: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao remover subscrição: {str(e)}'
