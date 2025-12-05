@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response, current_app, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models import db, Equipamento, Emprestimo, Usuario, EquipamentoFoto, Manutencao
+from app.models_supabase import Usuario, Equipamento
+# TODO: Migrar Emprestimo, EquipamentoFoto, Manutencao para models_supabase.py
 try:
     from app.prediction_service import prediction_service
     _prediction_import_error = None
@@ -8,7 +9,6 @@ except Exception as _e:
     prediction_service = None
     _prediction_import_error = str(_e)
 from datetime import datetime
-from sqlalchemy import func
 from functools import wraps
 from io import BytesIO
 from werkzeug.utils import secure_filename
@@ -52,15 +52,14 @@ def debug_config():
 @main.route('/debug/db')
 def debug_db():
     """Rota de diagnóstico para testar conexão com o banco"""
-    from app.models import db, Usuario
     info = {
         'can_connect': False,
         'error': None,
         'count_usuarios': None,
     }
     try:
-        # Testa uma query simples
-        count = db.session.execute(db.select(db.func.count(Usuario.id))).scalar()
+        # Testa conexão com Supabase REST API
+        count = Usuario.count()
         info['can_connect'] = True
         info['count_usuarios'] = int(count or 0)
         return jsonify({'success': True, 'db': info})
