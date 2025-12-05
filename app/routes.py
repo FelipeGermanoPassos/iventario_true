@@ -581,6 +581,11 @@ def index():
     return render_template('index.html')
 
 
+@main.route('/favicon.ico')
+def favicon():
+    """Serve o favicon"""
+    return send_from_directory(os.path.join(current_app.root_path, 'static'), 'favicon.ico', mimetype='image/x-icon')
+
 @main.route('/sw.js')
 def service_worker():
     """Serve o Service Worker na raiz para escopo global."""
@@ -657,7 +662,18 @@ def dashboard_data():
         
         # Empréstimos nos últimos 30 dias
         trinta_dias_atras = datetime.utcnow() - timedelta(days=30)
-        emprestimos_recentes = len([emp for emp in emprestimos_all if emp.data_emprestimo and emp.data_emprestimo >= trinta_dias_atras])
+        emprestimos_recentes = 0
+        for emp in emprestimos_all:
+            try:
+                if emp.data_emprestimo:
+                    if isinstance(emp.data_emprestimo, str):
+                        emp_date = datetime.fromisoformat(emp.data_emprestimo.replace('Z', '+00:00'))
+                    else:
+                        emp_date = emp.data_emprestimo
+                    if emp_date >= trinta_dias_atras:
+                        emprestimos_recentes += 1
+            except:
+                pass
         
         # Custo total de manutenções
         custo_manutencoes = sum([m.custo or 0 for m in manutencoes_all])

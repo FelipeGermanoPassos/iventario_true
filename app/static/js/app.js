@@ -205,16 +205,20 @@ function mostrarNotificacoes() {
     if (data.atrasados && data.atrasados.length > 0) {
         msg += '<h3 style="color:#dc2626;">⚠️ Empréstimos Atrasados (' + data.atrasados.length + ')</h3><ul>';
         data.atrasados.forEach(e => {
+            if (!e.data_devolucao_prevista) return; // Skip if no date
             const dias = Math.floor((new Date() - new Date(e.data_devolucao_prevista)) / 86400000);
-            msg += `<li><b>${e.equipamento_nome || 'Equipamento'}</b> - ${e.responsavel}<br>Venceu há ${dias} dia(s) (${new Date(e.data_devolucao_prevista).toLocaleDateString('pt-BR')})</li>`;
+            const dataFormatada = new Date(e.data_devolucao_prevista).toLocaleDateString('pt-BR');
+            msg += `<li><b>${e.equipamento_nome || 'Equipamento'}</b> - ${e.responsavel}<br>Venceu há ${dias} dia(s) (${dataFormatada})</li>`;
         });
         msg += '</ul>';
     }
     if (data.proximos_vencimento && data.proximos_vencimento.length > 0) {
         msg += '<h3 style="color:#f59e0b;">🔔 Devoluções Próximas (' + data.proximos_vencimento.length + ')</h3><ul>';
         data.proximos_vencimento.forEach(e => {
+            if (!e.data_devolucao_prevista) return; // Skip if no date
             const dias = Math.ceil((new Date(e.data_devolucao_prevista) - new Date()) / 86400000);
-            msg += `<li><b>${e.equipamento_nome || 'Equipamento'}</b> - ${e.responsavel}<br>Vence em ${dias} dia(s) (${new Date(e.data_devolucao_prevista).toLocaleDateString('pt-BR')})</li>`;
+            const dataFormatada = new Date(e.data_devolucao_prevista).toLocaleDateString('pt-BR');
+            msg += `<li><b>${e.equipamento_nome || 'Equipamento'}</b> - ${e.responsavel}<br>Vence em ${dias} dia(s) (${dataFormatada})</li>`;
         });
         msg += '</ul>';
     }
@@ -727,7 +731,7 @@ function renderizarEmprestimos(lista) {
     
     tbody.innerHTML = lista.map(emp => {
         const eq = emp.equipamento;
-        const dataEmprestimo = new Date(emp.data_emprestimo).toLocaleDateString('pt-BR');
+        const dataEmprestimo = emp.data_emprestimo ? new Date(emp.data_emprestimo).toLocaleDateString('pt-BR') : '-';
         const dataPrevista = emp.data_devolucao_prevista ? new Date(emp.data_devolucao_prevista).toLocaleDateString('pt-BR') : '-';
         
         // Verificar se está atrasado ou próximo ao vencimento
@@ -1051,8 +1055,8 @@ function renderizarManutencoes(lista) {
         return;
     }
     tbody.innerHTML = lista.map(m => {
-        const inicio = m.data_inicio ? new Date(m.data_inicio).toLocaleDateString('pt-BR') : '-';
-        const fim = m.data_fim ? new Date(m.data_fim).toLocaleDateString('pt-BR') : '-';
+        const inicio = m.data_inicio && m.data_inicio !== 'undefined' ? new Date(m.data_inicio).toLocaleDateString('pt-BR') : '-';
+        const fim = m.data_fim && m.data_fim !== 'undefined' ? new Date(m.data_fim).toLocaleDateString('pt-BR') : '-';
         const custo = (m.custo || m.custo === 0) ? Number(m.custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-';
         const desc = (m.descricao || '').replace(/\n/g, '<br>');
         return `
