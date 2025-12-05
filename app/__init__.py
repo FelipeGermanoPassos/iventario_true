@@ -1,21 +1,8 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
 import os
 import tempfile
-import socket as _socket
-
-# Força IPv4 antes de qualquer import que use socket
-_original_socket = _socket.socket
-def _ipv4_socket(*args, **kwargs):
-    """Força familia IPv4 ao criar sockets"""
-    # Se nenhuma família foi especificada, ou foi UNSPEC/UNSPEC, força IPv4
-    if not args or args[0] == _socket.AF_UNSPEC:
-        args = (_socket.AF_INET,) + args[1:] if len(args) > 1 else (_socket.AF_INET, _socket.SOCK_STREAM)
-    return _original_socket(*args, **kwargs)
-
-_socket.socket = _ipv4_socket
 
 def create_app():
     app = Flask(__name__)
@@ -23,34 +10,12 @@ def create_app():
     # Configurações
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'sua-chave-secreta-aqui-mude-em-producao')
     
-    # Permite substituir o banco via variável de ambiente (necessário para Vercel/Postgres)
-    db_url = os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI') or 'sqlite:///inventario.db'
+    # Configuração Supabase (REST API)
+    app.config['SUPABASE_URL'] = os.environ.get('SUPABASE_URL')
+    app.config['SUPABASE_KEY'] = os.environ.get('SUPABASE_KEY')
     
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
-    # Configurações otimizadas para serverless (Vercel)
+    # Verifica se está na Vercel
     is_vercel = bool(os.environ.get('VERCEL'))
-    if is_vercel:
-        # Em Vercel, usar pool_size mínimo com configurações agressivas de timeout
-        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            'pool_size': 1,
-            'max_overflow': 0,
-            'pool_pre_ping': True,
-            'pool_recycle': 300,
-            'pool_timeout': 10,
-            'connect_args': {
-                'connect_timeout': 10,
-                'keepalives': 0,  # Desabilitar keepalives que podem causar problemas
-            }
-        }
-    else:
-        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            'pool_size': 5,
-            'max_overflow': 10,
-            'pool_pre_ping': True,
-            'pool_recycle': 3600,
-        }
     
     # Configurações de E-mail
     # Carrega do arquivo .env se existir, senão usa variáveis de ambiente
@@ -102,9 +67,13 @@ def create_app():
     os.makedirs(backup_dir, exist_ok=True)
     app.config['BACKUP_FOLDER'] = backup_dir
     
-    # Inicializa o banco de dados
-    from app.models import db, Usuario
-    db.init_app(app)
+    # Inicializa o Supabase client
+    try:
+        from app.supabase_client import init_supabase
+        if not init_supabase():
+            app.logger.warning('Falha ao conectar com Supabase. Verifique SUPABASE_URL e SUPABASE_KEY.')
+    except Exception as e:
+        app.logger.error(f'Erro ao inicializar Supabase: {e}')
     
     # Inicializa o Flask-Mail
     mail = Mail()
@@ -119,17 +88,9 @@ def create_app():
     
     @login_manager.user_loader
     def load_user(user_id):
-        return Usuario.query.get(int(user_id))
-    
-    # Cria as tabelas se não existirem (com tratamento de erro para evitar crash no Vercel)
-    with app.app_context():
-        try:
-            db.create_all()
-        except Exception as e:
-            # Em produção serverless, as tabelas devem ser criadas via SQL script
-            # Logando o erro mas não quebrando a aplicação
-            app.logger.warning(f'Não foi possível criar tabelas automaticamente: {str(e)}')
-            app.logger.info('Se as tabelas não existem, execute o script supabase_init.sql no painel do Supabase')
+        # Usa o novo modelo Supabase
+        from app.models_supabase import Usuario
+        return Usuario.get_by_id(int(user_id))
     
     # Registra as rotas
     from app.routes import main
