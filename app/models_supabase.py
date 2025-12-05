@@ -233,13 +233,20 @@ class Equipamento:
                 return []
             return [Equipamento(eq) for eq in response.data]
         except Exception as e:
-            print(f"Erro ao buscar equipamentos: {e}")
+            try:
+                from flask import current_app
+                current_app.logger.error(f"❌ Erro ao buscar equipamentos: {type(e).__name__}: {str(e)}")
+            except:
+                print(f"❌ Erro ao buscar equipamentos: {type(e).__name__}: {str(e)}")
             return []
     
     @staticmethod
     def create(**kwargs) -> 'Equipamento':
         """Cria um novo equipamento"""
         try:
+            import os
+            from flask import current_app
+            
             data = {
                 'nome': kwargs.get('nome'),
                 'tipo': kwargs.get('tipo'),
@@ -259,14 +266,36 @@ class Equipamento:
                 'data_cadastro': datetime.utcnow().isoformat()
             }
             
+            # Remove valores None para evitar problemas com JSON
+            data = {k: v for k, v in data.items() if v is not None}
+            
+            if hasattr(current_app, 'logger'):
+                current_app.logger.debug(f'Criando equipamento com dados: {list(data.keys())}')
+            
             client = get_supabase_client()
+            
+            # Debug: verifica se a chave está configurada
+            supabase_key = os.environ.get('SUPABASE_KEY')
+            if supabase_key:
+                is_valid = len(supabase_key) > 50  # chaves válidas têm pelo menos 50 caracteres
+                if hasattr(current_app, 'logger'):
+                    current_app.logger.debug(f'Supabase Key válida: {is_valid}')
+            
             response = client.table('equipamentos').insert(data).execute()
+            
+            if hasattr(current_app, 'logger'):
+                current_app.logger.debug(f'Response status: {response}')
+            
             if response.data and len(response.data) > 0:
                 return Equipamento(response.data[0])
             else:
-                raise Exception("Falha ao inserir equipamento - resposta vazia")
+                raise Exception(f"Falha ao inserir equipamento - resposta vazia: {response}")
         except Exception as e:
-            print(f"Erro ao criar equipamento: {e}")
+            try:
+                from flask import current_app
+                current_app.logger.error(f"❌ Erro ao criar equipamento: {type(e).__name__}: {str(e)}")
+            except:
+                print(f"❌ Erro ao criar equipamento: {type(e).__name__}: {str(e)}")
             raise
     
     def update(self, **kwargs):

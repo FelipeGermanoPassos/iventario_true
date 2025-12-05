@@ -34,18 +34,22 @@ def debug_config():
     """Rota de debug para verificar configuração (REMOVER EM PRODUÇÃO!)"""
     import os
     db_url = os.environ.get('DATABASE_URL', 'NOT SET')
-    # Oculta a senha da URL do banco
-    if db_url and db_url != 'NOT SET':
-        db_url_safe = db_url.split('@')[1] if '@' in db_url else 'CONFIGURED'
-    else:
-        db_url_safe = db_url
+    supabase_url = os.environ.get('SUPABASE_URL', 'NOT SET')
+    supabase_key = os.environ.get('SUPABASE_KEY', 'NOT SET')
+    
+    # Oculta partes sensíveis
+    if supabase_url != 'NOT SET':
+        supabase_url = supabase_url[:30] + '...'
+    if supabase_key != 'NOT SET':
+        supabase_key = 'SET' if len(os.environ.get('SUPABASE_KEY', '')) > 50 else 'INVALID'
     
     return jsonify({
         'database_configured': bool(os.environ.get('DATABASE_URL')),
-        'database_host': db_url_safe,
+        'supabase_url': supabase_url,
+        'supabase_key': supabase_key,
         'secret_key_configured': bool(os.environ.get('SECRET_KEY')),
         'is_vercel': bool(os.environ.get('VERCEL')),
-        'app_database_uri': current_app.config.get('SQLALCHEMY_DATABASE_URI', '').split('@')[1] if '@' in current_app.config.get('SQLALCHEMY_DATABASE_URI', '') else 'NOT CONFIGURED'
+        'flask_env': os.environ.get('FLASK_ENV', 'production')
     })
 
 @main.route('/debug/db')
@@ -55,15 +59,23 @@ def debug_db():
         'can_connect': False,
         'error': None,
         'count_usuarios': None,
+        'supabase_url': os.environ.get('SUPABASE_URL', 'NOT SET')[:50] + '...' if os.environ.get('SUPABASE_URL') else 'NOT SET',
+        'supabase_key': 'SET' if os.environ.get('SUPABASE_KEY') else 'NOT SET',
     }
     try:
         # Testa conexão com Supabase REST API
-        count = Usuario.count()
+        from app.supabase_client import get_supabase_client
+        client = get_supabase_client()
+        
+        # Tenta uma query simples
+        response = client.table('usuarios').select('id').limit(1).execute()
+        
         info['can_connect'] = True
-        info['count_usuarios'] = int(count or 0)
+        info['count_usuarios'] = 'Query succeeded'
         return jsonify({'success': True, 'db': info})
     except Exception as e:
         info['error'] = str(e)
+        info['error_type'] = type(e).__name__
         return jsonify({'success': False, 'db': info}), 503
 
 # Decorator para verificar se usuário é admin
@@ -793,6 +805,8 @@ def _save_equip_photo(file_storage):
 def adicionar_equipamento():
     """Adiciona um novo equipamento"""
     try:
+        current_app.logger.info('=== Iniciando adição de equipamento ===')
+        
         data = None
         is_multipart = request.content_type and 'multipart/form-data' in request.content_type
         if is_multipart:
@@ -801,13 +815,17 @@ def adicionar_equipamento():
         else:
             data = request.get_json(silent=True) or {}
         
+        current_app.logger.info(f'Dados recebidos: {list(data.keys())}')
+        
         # Validação de campos obrigatórios
         campos_obrigatorios = ['nome', 'tipo', 'marca', 'modelo', 'numero_serie', 'status']
         campos_faltando = [c for c in campos_obrigatorios if not data.get(c)]
         if campos_faltando:
+            msg = f'Campos obrigatórios faltando: {", ".join(campos_faltando)}'
+            current_app.logger.warning(msg)
             return jsonify({
                 'success': False,
-                'message': f'Campos obrigatórios faltando: {", ".join(campos_faltando)}'
+                'message': msg
             }), 400
         
         # Converte a data de aquisição se fornecida
@@ -817,6 +835,8 @@ def adicionar_equipamento():
                 data_aquisicao = datetime.strptime(data['data_aquisicao'], '%Y-%m-%d').date()
             except:
                 pass
+        
+        current_app.logger.info(f'Criando equipamento: {data.get("nome")} ({data.get("tipo")})')
         
         equipamento = Equipamento.create(
             nome=data['nome'],
@@ -834,6 +854,8 @@ def adicionar_equipamento():
             observacoes=data.get('observacoes')
         )
 
+        current_app.logger.info(f'✅ Equipamento criado com ID: {equipamento.id}')
+
         # Foto (opcional)
         if is_multipart and 'foto' in request.files:
             foto_file = request.files.get('foto')
@@ -842,9 +864,9 @@ def adicionar_equipamento():
                     url = _save_equip_photo(foto_file)
                     if url:
                         EquipamentoFoto.create(equipamento_id=equipamento.id, url=url, principal=True)
+                        current_app.logger.info(f'✅ Foto salva: {url}')
                 except Exception as foto_err:
-                    # Não falha se foto não conseguir salvar
-                    print(f"Erro ao salvar foto: {foto_err}")
+                    current_app.logger.warning(f'⚠️ Erro ao salvar foto: {foto_err}')
         
         return jsonify({
             'success': True,
@@ -853,7 +875,7 @@ def adicionar_equipamento():
         }), 201
         
     except Exception as e:
-        current_app.logger.error(f'Erro ao adicionar equipamento: {str(e)}', exc_info=True)
+        current_app.logger.error(f'❌ Erro ao adicionar equipamento: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao adicionar equipamento: {str(e)}'
