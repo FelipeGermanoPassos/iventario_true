@@ -4,6 +4,18 @@ from flask_login import LoginManager
 from flask_mail import Mail
 import os
 import tempfile
+import socket as _socket
+
+# Força IPv4 antes de qualquer import que use socket
+_original_socket = _socket.socket
+def _ipv4_socket(*args, **kwargs):
+    """Força familia IPv4 ao criar sockets"""
+    # Se nenhuma família foi especificada, ou foi UNSPEC/UNSPEC, força IPv4
+    if not args or args[0] == _socket.AF_UNSPEC:
+        args = (_socket.AF_INET,) + args[1:] if len(args) > 1 else (_socket.AF_INET, _socket.SOCK_STREAM)
+    return _original_socket(*args, **kwargs)
+
+_socket.socket = _ipv4_socket
 
 def create_app():
     app = Flask(__name__)
@@ -20,15 +32,16 @@ def create_app():
     # Configurações otimizadas para serverless (Vercel)
     is_vercel = bool(os.environ.get('VERCEL'))
     if is_vercel:
+        # Em Vercel, usar pool_size mínimo com configurações agressivas de timeout
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
             'pool_size': 1,
             'max_overflow': 0,
             'pool_pre_ping': True,
             'pool_recycle': 300,
-            'pool_timeout': 30,
+            'pool_timeout': 10,
             'connect_args': {
-                'connect_timeout': 30,
-                'keepalives': 1,
+                'connect_timeout': 10,
+                'keepalives': 0,  # Desabilitar keepalives que podem causar problemas
             }
         }
     else:
