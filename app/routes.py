@@ -1022,39 +1022,62 @@ def obter_manutencao(id):
 def editar_manutencao(id):
     """Edita uma manutenção existente"""
     try:
-        manutencao = Manutencao.query.get_or_404(id)
+        manutencao = Manutencao.get_by_id(id)
+        if not manutencao:
+            return jsonify({'success': False, 'message': 'Manutenção não encontrada'}), 404
+        
         data = request.get_json()
+        update_data = {}
 
         # Parse datas e campos
         if 'data_inicio' in data:
-            manutencao.data_inicio = datetime.strptime(data['data_inicio'], '%Y-%m-%d').date() if data['data_inicio'] else None
+            try:
+                update_data['data_inicio'] = datetime.strptime(data['data_inicio'], '%Y-%m-%d').date().isoformat() if data['data_inicio'] else None
+            except:
+                update_data['data_inicio'] = None
+        
         if 'data_fim' in data:
-            manutencao.data_fim = datetime.strptime(data['data_fim'], '%Y-%m-%d').date() if data['data_fim'] else None
+            try:
+                update_data['data_fim'] = datetime.strptime(data['data_fim'], '%Y-%m-%d').date().isoformat() if data['data_fim'] else None
+            except:
+                update_data['data_fim'] = None
+        
         if 'custo' in data:
-            manutencao.custo = float(data['custo']) if data['custo'] not in (None, '') else None
+            try:
+                update_data['custo'] = float(data['custo']) if data['custo'] not in (None, '') else None
+            except:
+                update_data['custo'] = None
+        
         if 'tipo' in data:
-            manutencao.tipo = data['tipo'] or manutencao.tipo
+            update_data['tipo'] = data['tipo'] or manutencao.tipo
+        
         if 'descricao' in data:
-            manutencao.descricao = data['descricao']
+            update_data['descricao'] = data['descricao']
+        
         if 'responsavel' in data:
-            manutencao.responsavel = data['responsavel']
+            update_data['responsavel'] = data['responsavel']
+        
         if 'fornecedor' in data:
-            manutencao.fornecedor = data['fornecedor']
+            update_data['fornecedor'] = data['fornecedor']
+        
         if 'status' in data:
-            manutencao.status = data['status'] or manutencao.status
+            update_data['status'] = data['status'] or manutencao.status
 
+        # Atualizar a manutenção
+        Manutencao.update(id, update_data)
+        
         # Atualiza status do equipamento se solicitado
-        if data.get('atualizar_status_equipamento', True):
-            equipamento = Equipamento.query.get(manutencao.equipamento_id)
+        if data.get('atualizar_status_equipamento', True) and update_data.get('status'):
+            equipamento = Equipamento.get_by_id(manutencao.equipamento_id)
             if equipamento:
-                if manutencao.status == 'Em Andamento':
-                    equipamento.status = 'Manutenção'
-                # Mantemos a lógica conservadora; não alteramos automaticamente em 'Concluída'
-
-        db.session.commit()
+                if update_data['status'] == 'Em Andamento':
+                    Equipamento.update(equipamento.id, {'status': 'Manutenção'})
+        
+        # Recarregar para retornar dados atualizados
+        manutencao = Manutencao.get_by_id(id)
         return jsonify({'success': True, 'message': 'Manutenção atualizada com sucesso!', 'manutencao': manutencao.to_dict()})
     except Exception as e:
-        db.session.rollback()
+        current_app.logger.error(f'Erro ao atualizar manutenção: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'message': f'Erro ao atualizar manutenção: {str(e)}'}), 400
 
 
@@ -1064,28 +1087,35 @@ def editar_manutencao(id):
 @login_required
 def listar_equipamentos_estoque():
     """Lista apenas equipamentos disponíveis em estoque"""
-    equipamentos = Equipamento.query.filter_by(status='Estoque').order_by(Equipamento.nome).all()
+    equipamentos = Equipamento.get_all()
+    equipamentos = [eq for eq in equipamentos if eq.status == 'Estoque']
+    equipamentos.sort(key=lambda e: e.nome or '')
     return jsonify([eq.to_dict() for eq in equipamentos])
 
 @main.route('/emprestimos')
 @login_required
 def listar_emprestimos():
     """Lista todos os empréstimos"""
-    emprestimos = Emprestimo.query.order_by(Emprestimo.data_emprestimo.desc()).all()
+    emprestimos = Emprestimo.get_all()
+    emprestimos.sort(key=lambda e: e.data_emprestimo or '', reverse=True)
     return jsonify([emp.to_dict() for emp in emprestimos])
 
 @main.route('/emprestimos-ativos')
 @login_required
 def listar_emprestimos_ativos():
     """Lista apenas empréstimos ativos"""
-    emprestimos = Emprestimo.query.filter_by(status='Ativo').order_by(Emprestimo.data_emprestimo.desc()).all()
+    emprestimos = Emprestimo.get_all()
+    emprestimos = [emp for emp in emprestimos if emp.status == 'Ativo']
+    emprestimos.sort(key=lambda e: e.data_emprestimo or '', reverse=True)
     return jsonify([emp.to_dict() for emp in emprestimos])
 
 @main.route('/emprestimo/<int:id>')
 @login_required
 def obter_emprestimo(id):
     """Obtém um empréstimo específico"""
-    emprestimo = Emprestimo.query.get_or_404(id)
+    emprestimo = Emprestimo.get_by_id(id)
+    if not emprestimo:
+        return jsonify({'success': False, 'message': 'Empréstimo não encontrado'}), 404
     return jsonify(emprestimo.to_dict())
 
 @main.route('/emprestimo/adicionar', methods=['POST'])
