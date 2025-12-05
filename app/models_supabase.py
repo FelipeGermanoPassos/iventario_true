@@ -323,9 +323,21 @@ class Emprestimo:
             'status': self.status,
             'observacoes': self.observacoes
         }
+        # Sempre incluir equipamento_nome (se disponível)
         if self.equipamento:
             result['equipamento'] = self.equipamento.to_dict()
             result['equipamento_nome'] = f"{self.equipamento.nome} - {self.equipamento.marca} {self.equipamento.modelo}"
+        else:
+            # Fallback: tentar buscar o equipamento se não estiver disponível
+            try:
+                equip = Equipamento.get_by_id(self.equipamento_id)
+                if equip:
+                    result['equipamento'] = equip.to_dict()
+                    result['equipamento_nome'] = f"{equip.nome} - {equip.marca} {equip.modelo}"
+                else:
+                    result['equipamento_nome'] = 'Equipamento desconhecido'
+            except:
+                result['equipamento_nome'] = 'Equipamento desconhecido'
         return result
     
     @staticmethod

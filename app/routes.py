@@ -1291,28 +1291,28 @@ def emprestimos_notificacoes():
         emprestimos_all = Emprestimo.get_all()
         
         # Empréstimos ativos próximos ao vencimento (dentro dos próximos N dias)
-        proximos_vencimento = [
-            emp for emp in emprestimos_all
-            if emp.status == 'Ativo'
-            and emp.data_devolucao_prevista
-            and emp.data_devolucao_prevista > str(hoje)
-            and emp.data_devolucao_prevista <= str(data_limite)
-        ]
-        proximos_vencimento.sort(key=lambda e: e.data_devolucao_prevista)
+        proximos_vencimento = []
+        atrasados = []
         
-        # Empréstimos atrasados (data prevista já passou)
-        atrasados = [
-            emp for emp in emprestimos_all
-            if emp.status == 'Ativo'
-            and emp.data_devolucao_prevista
-            and emp.data_devolucao_prevista < str(hoje)
-        ]
-        atrasados.sort(key=lambda e: e.data_devolucao_prevista)
+        for emp in emprestimos_all:
+            if emp.status != 'Ativo' or not emp.data_devolucao_prevista:
+                continue
+            
+            emp_dict = emp.to_dict()
+            
+            # Comparar datas como strings
+            if emp.data_devolucao_prevista > str(hoje) and emp.data_devolucao_prevista <= str(data_limite):
+                proximos_vencimento.append(emp_dict)
+            elif emp.data_devolucao_prevista < str(hoje):
+                atrasados.append(emp_dict)
+        
+        proximos_vencimento.sort(key=lambda e: e.get('data_devolucao_prevista', ''))
+        atrasados.sort(key=lambda e: e.get('data_devolucao_prevista', ''))
         
         return jsonify({
             'success': True,
-            'proximos_vencimento': [e.to_dict() for e in proximos_vencimento],
-            'atrasados': [e.to_dict() for e in atrasados],
+            'proximos_vencimento': proximos_vencimento,
+            'atrasados': atrasados,
             'total_notificacoes': len(proximos_vencimento) + len(atrasados)
         })
     except Exception as e:
