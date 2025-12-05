@@ -226,35 +226,48 @@ class Equipamento:
     @staticmethod
     def get_all() -> List['Equipamento']:
         """Retorna todos os equipamentos"""
-        client = get_supabase_client()
-        response = client.table('equipamentos').select('*').execute()
-        return [Equipamento(eq) for eq in response.data]
+        try:
+            client = get_supabase_client()
+            response = client.table('equipamentos').select('*').execute()
+            if response.data is None:
+                return []
+            return [Equipamento(eq) for eq in response.data]
+        except Exception as e:
+            print(f"Erro ao buscar equipamentos: {e}")
+            return []
     
     @staticmethod
     def create(**kwargs) -> 'Equipamento':
         """Cria um novo equipamento"""
-        data = {
-            'nome': kwargs.get('nome'),
-            'tipo': kwargs.get('tipo'),
-            'marca': kwargs.get('marca'),
-            'modelo': kwargs.get('modelo'),
-            'numero_serie': kwargs.get('numero_serie'),
-            'processador': kwargs.get('processador'),
-            'memoria_ram': kwargs.get('memoria_ram'),
-            'armazenamento': kwargs.get('armazenamento'),
-            'sistema_operacional': kwargs.get('sistema_operacional'),
-            'status': kwargs.get('status', 'Estoque'),
-            'data_aquisicao': kwargs.get('data_aquisicao'),
-            'valor': kwargs.get('valor'),
-            'vida_util_anos': kwargs.get('vida_util_anos', 5),
-            'departamento_atual': kwargs.get('departamento_atual'),
-            'observacoes': kwargs.get('observacoes'),
-            'data_cadastro': datetime.utcnow().isoformat()
-        }
-        
-        client = get_supabase_client()
-        response = client.table('equipamentos').insert(data).execute()
-        return Equipamento(response.data[0])
+        try:
+            data = {
+                'nome': kwargs.get('nome'),
+                'tipo': kwargs.get('tipo'),
+                'marca': kwargs.get('marca'),
+                'modelo': kwargs.get('modelo'),
+                'numero_serie': kwargs.get('numero_serie'),
+                'processador': kwargs.get('processador'),
+                'memoria_ram': kwargs.get('memoria_ram'),
+                'armazenamento': kwargs.get('armazenamento'),
+                'sistema_operacional': kwargs.get('sistema_operacional'),
+                'status': kwargs.get('status', 'Estoque'),
+                'data_aquisicao': kwargs.get('data_aquisicao'),
+                'valor': kwargs.get('valor'),
+                'vida_util_anos': kwargs.get('vida_util_anos', 5),
+                'departamento_atual': kwargs.get('departamento_atual'),
+                'observacoes': kwargs.get('observacoes'),
+                'data_cadastro': datetime.utcnow().isoformat()
+            }
+            
+            client = get_supabase_client()
+            response = client.table('equipamentos').insert(data).execute()
+            if response.data and len(response.data) > 0:
+                return Equipamento(response.data[0])
+            else:
+                raise Exception("Falha ao inserir equipamento - resposta vazia")
+        except Exception as e:
+            print(f"Erro ao criar equipamento: {e}")
+            raise
     
     def update(self, **kwargs):
         """Atualiza dados do equipamento"""

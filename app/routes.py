@@ -748,8 +748,12 @@ def dashboard_data():
 @login_required
 def listar_equipamentos():
     """Lista todos os equipamentos"""
-    equipamentos = Equipamento.get_all()
-    return jsonify([eq.to_dict() for eq in equipamentos])
+    try:
+        equipamentos = Equipamento.get_all()
+        return jsonify([eq.to_dict() for eq in equipamentos])
+    except Exception as e:
+        current_app.logger.error(f'Erro ao listar equipamentos: {str(e)}', exc_info=True)
+        return jsonify([])  # Retorna array vazio em caso de erro
 
 @main.route('/equipamento/<int:id>')
 @login_required
@@ -797,10 +801,22 @@ def adicionar_equipamento():
         else:
             data = request.get_json(silent=True) or {}
         
+        # Validação de campos obrigatórios
+        campos_obrigatorios = ['nome', 'tipo', 'marca', 'modelo', 'numero_serie', 'status']
+        campos_faltando = [c for c in campos_obrigatorios if not data.get(c)]
+        if campos_faltando:
+            return jsonify({
+                'success': False,
+                'message': f'Campos obrigatórios faltando: {", ".join(campos_faltando)}'
+            }), 400
+        
         # Converte a data de aquisição se fornecida
         data_aquisicao = None
         if data.get('data_aquisicao'):
-            data_aquisicao = datetime.strptime(data['data_aquisicao'], '%Y-%m-%d').date()
+            try:
+                data_aquisicao = datetime.strptime(data['data_aquisicao'], '%Y-%m-%d').date()
+            except:
+                pass
         
         equipamento = Equipamento.create(
             nome=data['nome'],
@@ -822,9 +838,13 @@ def adicionar_equipamento():
         if is_multipart and 'foto' in request.files:
             foto_file = request.files.get('foto')
             if foto_file and foto_file.filename:
-                url = _save_equip_photo(foto_file)
-                if url:
-                    EquipamentoFoto.create(equipamento_id=equipamento.id, url=url, principal=True)
+                try:
+                    url = _save_equip_photo(foto_file)
+                    if url:
+                        EquipamentoFoto.create(equipamento_id=equipamento.id, url=url, principal=True)
+                except Exception as foto_err:
+                    # Não falha se foto não conseguir salvar
+                    print(f"Erro ao salvar foto: {foto_err}")
         
         return jsonify({
             'success': True,
@@ -833,6 +853,7 @@ def adicionar_equipamento():
         }), 201
         
     except Exception as e:
+        current_app.logger.error(f'Erro ao adicionar equipamento: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao adicionar equipamento: {str(e)}'
