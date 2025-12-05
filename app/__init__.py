@@ -18,7 +18,6 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Configurações otimizadas para serverless (Vercel)
-    # IMPORTANTE: Usa tcp_user_timeout e disable_ipv6 para evitar problemas de IPv6 na Vercel
     is_vercel = bool(os.environ.get('VERCEL'))
     if is_vercel:
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -30,11 +29,6 @@ def create_app():
             'connect_args': {
                 'connect_timeout': 30,
                 'keepalives': 1,
-                'keepalives_idle': 30,
-                'keepalives_interval': 10,
-                'keepalives_count': 5,
-                'tcp_user_timeout': 30000,  # 30 segundos em ms
-                'tcp_keepalives_idle': 30,
             }
         }
     else:
