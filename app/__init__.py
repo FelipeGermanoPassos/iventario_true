@@ -4,6 +4,17 @@ from flask_login import LoginManager
 from flask_mail import Mail
 import os
 import tempfile
+import socket
+
+# Força getaddrinfo a usar apenas IPv4
+original_getaddrinfo = socket.getaddrinfo
+
+def ipv4_only_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    """Wrapper que força socket.AF_INET (IPv4) ao invés de AF_UNSPEC"""
+    return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+# Substitui a função globalmente para aplicações que usam getaddrinfo
+socket.getaddrinfo = ipv4_only_getaddrinfo
 
 def create_app():
     app = Flask(__name__)
