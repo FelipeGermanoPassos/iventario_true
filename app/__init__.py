@@ -4,20 +4,6 @@ from flask_login import LoginManager
 from flask_mail import Mail
 import os
 import tempfile
-import socket
-
-def _resolve_ipv4_only(hostname):
-    """Força resolução DNS apenas para IPv4 (evita problemas de IPv6 na Vercel)"""
-    try:
-        # Tenta resolver hostname apenas para IPv4
-        result = socket.getaddrinfo(hostname, 5432, socket.AF_INET, socket.SOCK_STREAM)
-        if result:
-            ipv4_addr = result[0][4][0]
-            return ipv4_addr
-    except Exception as e:
-        import logging
-        logging.warning(f"Erro ao resolver {hostname} para IPv4: {e}")
-    return hostname
 
 def create_app():
     app = Flask(__name__)
@@ -28,25 +14,12 @@ def create_app():
     # Permite substituir o banco via variável de ambiente (necessário para Vercel/Postgres)
     db_url = os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI') or 'sqlite:///inventario.db'
     
-    # Em ambientes serverless (Vercel), força resolver IPv4 para evitar problemas de conectividade
-    is_vercel = bool(os.environ.get('VERCEL'))
-    if is_vercel and db_url.startswith('postgresql'):
-        # Extrai hostname da URL
-        try:
-            import re
-            match = re.search(r'@([^:/?]+)', db_url)
-            if match:
-                hostname = match.group(1)
-                ipv4_addr = _resolve_ipv4_only(hostname)
-                db_url = db_url.replace(f'@{hostname}', f'@{ipv4_addr}')
-                app.logger.info(f"Resolvido {hostname} para IPv4: {ipv4_addr}")
-        except Exception as e:
-            app.logger.warning(f"Erro ao processar hostname para IPv4: {e}")
-    
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Configurações otimizadas para serverless (Vercel)
+    # IMPORTANTE: Usa tcp_user_timeout e disable_ipv6 para evitar problemas de IPv6 na Vercel
+    is_vercel = bool(os.environ.get('VERCEL'))
     if is_vercel:
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
             'pool_size': 1,
@@ -60,7 +33,16 @@ def create_app():
                 'keepalives_idle': 30,
                 'keepalives_interval': 10,
                 'keepalives_count': 5,
+                'tcp_user_timeout': 30000,  # 30 segundos em ms
+                'tcp_keepalives_idle': 30,
             }
+        }
+    else:
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'pool_size': 5,
+            'max_overflow': 10,
+            'pool_pre_ping': True,
+            'pool_recycle': 3600,
         }
     
     # Configurações de E-mail
