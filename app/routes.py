@@ -591,99 +591,103 @@ def service_worker():
 @login_required
 def dashboard_data():
     """Retorna dados para o dashboard"""
-    from datetime import timedelta
-    
-    # Busca todos os dados uma vez
-    equipamentos_all = Equipamento.get_all()
-    emprestimos_all = Emprestimo.get_all()
-    manutencoes_all = Manutencao.get_all()
-    
-    # Total de equipamentos
-    total_equipamentos = len(equipamentos_all)
-    
-    # Equipamentos por status
-    status_data = {}
-    for eq in equipamentos_all:
-        status = eq.status or 'Desconhecido'
-        status_data[status] = status_data.get(status, 0) + 1
-    status_data = list(status_data.items())
-    
-    # Equipamentos por tipo
-    tipo_data = {}
-    for eq in equipamentos_all:
-        tipo = eq.tipo or 'Desconhecido'
-        tipo_data[tipo] = tipo_data.get(tipo, 0) + 1
-    tipo_data = list(tipo_data.items())
-    
-    # Equipamentos em estoque (disponíveis)
-    equipamentos_estoque = len([eq for eq in equipamentos_all if eq.status == 'Estoque'])
-    
-    # Equipamentos emprestados
-    equipamentos_emprestados = len([eq for eq in equipamentos_all if eq.status == 'Emprestado'])
-    
-    # Equipamentos em manutenção
-    equipamentos_manutencao = len([eq for eq in equipamentos_all if eq.status == 'Manutenção'])
-    
-    # Valor total do inventário
-    valor_total = sum([eq.valor or 0 for eq in equipamentos_all])
-    
-    # Empréstimos ativos
-    emprestimos_ativos = len([emp for emp in emprestimos_all if emp.status == 'Ativo'])
-    
-    # Empréstimos por departamento (ativos) - TOP 10
-    emps_por_dept = {}
-    for emp in emprestimos_all:
-        if emp.status == 'Ativo':
-            dept = emp.departamento or 'Sem Departamento'
-            emps_por_dept[dept] = emps_por_dept.get(dept, 0) + 1
-    emprestimos_por_dept = sorted(emps_por_dept.items(), key=lambda x: x[1], reverse=True)[:10]
-    
-    # Taxa de utilização (emprestados / total)
-    taxa_utilizacao = (equipamentos_emprestados / total_equipamentos * 100) if total_equipamentos > 0 else 0
-    
-    # Equipamentos mais emprestados (histórico completo) - TOP 5
-    eq_count = {}
-    for emp in emprestimos_all:
-        eq_id = emp.equipamento_id
-        eq_count[eq_id] = eq_count.get(eq_id, 0) + 1
-    
-    eq_popular = []
-    for eq in equipamentos_all:
-        if eq_count.get(eq.id, 0) > 0:
-            eq_popular.append((eq_count[eq.id], eq.nome, eq.tipo))
-    eq_popular.sort(reverse=True, key=lambda x: x[0])
-    equipamentos_populares = [(e[1], e[2], e[0]) for e in eq_popular[:5]]
-    
-    # Empréstimos nos últimos 30 dias
-    trinta_dias_atras = datetime.utcnow() - timedelta(days=30)
-    emprestimos_recentes = len([emp for emp in emprestimos_all if emp.data_emprestimo and emp.data_emprestimo >= trinta_dias_atras])
-    
-    # Custo total de manutenções
-    custo_manutencoes = sum([m.custo or 0 for m in manutencoes_all])
-    
-    # Manutenções pendentes (em andamento)
-    manutencoes_pendentes = len([m for m in manutencoes_all if m.status == 'Em Andamento'])
-    
-    # Valor médio dos equipamentos
-    valor_medio = (valor_total / total_equipamentos) if total_equipamentos > 0 else 0
-    
-    return jsonify({
-        'total_equipamentos': total_equipamentos,
-        'equipamentos_estoque': equipamentos_estoque,
-        'equipamentos_emprestados': equipamentos_emprestados,
-        'equipamentos_manutencao': equipamentos_manutencao,
-        'emprestimos_ativos': emprestimos_ativos,
-        'emprestimos_recentes': emprestimos_recentes,
-        'manutencoes_pendentes': manutencoes_pendentes,
-        'taxa_utilizacao': round(taxa_utilizacao, 1),
-        'valor_total': float(valor_total),
-        'valor_medio': float(valor_medio),
-        'custo_manutencoes': float(custo_manutencoes),
-        'status': [{'name': s[0], 'value': s[1]} for s in status_data],
-        'tipos': [{'name': t[0], 'value': t[1]} for t in tipo_data],
-        'emprestimos_por_departamento': [{'name': d[0], 'value': d[1]} for d in emprestimos_por_dept],
-        'equipamentos_populares': [{'nome': e[0], 'tipo': e[1], 'emprestimos': e[2]} for e in equipamentos_populares]
-    })
+    try:
+        from datetime import timedelta
+        
+        # Busca todos os dados uma vez
+        equipamentos_all = Equipamento.get_all()
+        emprestimos_all = Emprestimo.get_all()
+        manutencoes_all = Manutencao.get_all()
+        
+        # Total de equipamentos
+        total_equipamentos = len(equipamentos_all)
+        
+        # Equipamentos por status
+        status_data = {}
+        for eq in equipamentos_all:
+            status = eq.status or 'Desconhecido'
+            status_data[status] = status_data.get(status, 0) + 1
+        status_data = list(status_data.items())
+        
+        # Equipamentos por tipo
+        tipo_data = {}
+        for eq in equipamentos_all:
+            tipo = eq.tipo or 'Desconhecido'
+            tipo_data[tipo] = tipo_data.get(tipo, 0) + 1
+        tipo_data = list(tipo_data.items())
+        
+        # Equipamentos em estoque (disponíveis)
+        equipamentos_estoque = len([eq for eq in equipamentos_all if eq.status == 'Estoque'])
+        
+        # Equipamentos emprestados
+        equipamentos_emprestados = len([eq for eq in equipamentos_all if eq.status == 'Emprestado'])
+        
+        # Equipamentos em manutenção
+        equipamentos_manutencao = len([eq for eq in equipamentos_all if eq.status == 'Manutenção'])
+        
+        # Valor total do inventário
+        valor_total = sum([eq.valor or 0 for eq in equipamentos_all])
+        
+        # Empréstimos ativos
+        emprestimos_ativos = len([emp for emp in emprestimos_all if emp.status == 'Ativo'])
+        
+        # Empréstimos por departamento (ativos) - TOP 10
+        emps_por_dept = {}
+        for emp in emprestimos_all:
+            if emp.status == 'Ativo':
+                dept = emp.departamento or 'Sem Departamento'
+                emps_por_dept[dept] = emps_por_dept.get(dept, 0) + 1
+        emprestimos_por_dept = sorted(emps_por_dept.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        # Taxa de utilização (emprestados / total)
+        taxa_utilizacao = (equipamentos_emprestados / total_equipamentos * 100) if total_equipamentos > 0 else 0
+        
+        # Equipamentos mais emprestados (histórico completo) - TOP 5
+        eq_count = {}
+        for emp in emprestimos_all:
+            eq_id = emp.equipamento_id
+            eq_count[eq_id] = eq_count.get(eq_id, 0) + 1
+        
+        eq_popular = []
+        for eq in equipamentos_all:
+            if eq_count.get(eq.id, 0) > 0:
+                eq_popular.append((eq_count[eq.id], eq.nome, eq.tipo))
+        eq_popular.sort(reverse=True, key=lambda x: x[0])
+        equipamentos_populares = [(e[1], e[2], e[0]) for e in eq_popular[:5]]
+        
+        # Empréstimos nos últimos 30 dias
+        trinta_dias_atras = datetime.utcnow() - timedelta(days=30)
+        emprestimos_recentes = len([emp for emp in emprestimos_all if emp.data_emprestimo and emp.data_emprestimo >= trinta_dias_atras])
+        
+        # Custo total de manutenções
+        custo_manutencoes = sum([m.custo or 0 for m in manutencoes_all])
+        
+        # Manutenções pendentes (em andamento)
+        manutencoes_pendentes = len([m for m in manutencoes_all if m.status == 'Em Andamento'])
+        
+        # Valor médio dos equipamentos
+        valor_medio = (valor_total / total_equipamentos) if total_equipamentos > 0 else 0
+        
+        return jsonify({
+            'total_equipamentos': total_equipamentos,
+            'equipamentos_estoque': equipamentos_estoque,
+            'equipamentos_emprestados': equipamentos_emprestados,
+            'equipamentos_manutencao': equipamentos_manutencao,
+            'emprestimos_ativos': emprestimos_ativos,
+            'emprestimos_recentes': emprestimos_recentes,
+            'manutencoes_pendentes': manutencoes_pendentes,
+            'taxa_utilizacao': round(taxa_utilizacao, 1),
+            'valor_total': float(valor_total),
+            'valor_medio': float(valor_medio),
+            'custo_manutencoes': float(custo_manutencoes),
+            'status': [{'name': s[0], 'value': s[1]} for s in status_data],
+            'tipos': [{'name': t[0], 'value': t[1]} for t in tipo_data],
+            'emprestimos_por_departamento': [{'name': d[0], 'value': d[1]} for d in emprestimos_por_dept],
+            'equipamentos_populares': [{'nome': e[0], 'tipo': e[1], 'emprestimos': e[2]} for e in equipamentos_populares]
+        })
+    except Exception as e:
+        current_app.logger.error(f'Erro no dashboard_data: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'message': f'Erro ao carregar dashboard: {str(e)}'}), 500
 
 @main.route('/equipamentos')
 @login_required
