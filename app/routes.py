@@ -879,10 +879,13 @@ def deletar_equipamento(id):
 def gerar_qrcode(id):
     """Gera QR Code para um equipamento"""
     try:
-        equipamento = Equipamento.query.get_or_404(id)
+        equipamento = Equipamento.get_by_id(id)
+        if not equipamento:
+            return jsonify({'success': False, 'message': 'Equipamento não encontrado'}), 404
         
+        eq_dict = equipamento.to_dict()
         # Dados para o QR Code (ID e número de série)
-        dados_qr = f"ID: {equipamento.id}\nNome: {equipamento.nome}\nN° Série: {equipamento.numero_serie}\nMarca: {equipamento.marca}\nModelo: {equipamento.modelo}"
+        dados_qr = f"ID: {eq_dict['id']}\nNome: {eq_dict.get('nome', '')}\nN° Série: {eq_dict.get('numero_serie', '')}\nMarca: {eq_dict.get('marca', '')}\nModelo: {eq_dict.get('modelo', '')}"
         
         # Gera o QR Code
         qr = qrcode.QRCode(
@@ -915,10 +918,11 @@ def gerar_qrcode(id):
         return jsonify({
             'success': True,
             'qrcode': f'data:{mime};base64,{img_base64}',
-            'equipamento': equipamento.to_dict()
+            'equipamento': eq_dict
         })
         
     except Exception as e:
+        current_app.logger.error(f'Erro ao gerar QR Code: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao gerar QR Code: {str(e)}'
@@ -932,10 +936,16 @@ def gerar_qrcode(id):
 def listar_manutencoes(equipamento_id):
     """Lista manutenções de um equipamento (mais recentes primeiro)"""
     try:
-        equipamento = Equipamento.query.get_or_404(equipamento_id)
-        manutencoes = Manutencao.query.filter_by(equipamento_id=equipamento.id).order_by(Manutencao.data_registro.desc()).all()
+        equipamento = Equipamento.get_by_id(equipamento_id)
+        if not equipamento:
+            return jsonify({'success': False, 'message': 'Equipamento não encontrado'}), 404
+        
+        manutencoes = Manutencao.get_all()
+        manutencoes = [m for m in manutencoes if m.equipamento_id == equipamento_id]
+        manutencoes.sort(key=lambda m: m.data_registro or '', reverse=True)
         return jsonify({'success': True, 'manutencoes': [m.to_dict() for m in manutencoes]})
     except Exception as e:
+        current_app.logger.error(f'Erro ao listar manutenções: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'message': f'Erro ao listar manutenções: {str(e)}'}), 400
 
 
@@ -944,49 +954,51 @@ def listar_manutencoes(equipamento_id):
 def adicionar_manutencao(equipamento_id):
     """Adiciona uma manutenção ao equipamento"""
     try:
-        equipamento = Equipamento.query.get_or_404(equipamento_id)
+        equipamento = Equipamento.get_by_id(equipamento_id)
+        if not equipamento:
+            return jsonify({'success': False, 'message': 'Equipamento não encontrado'}), 404
+        
         data = request.get_json()
 
         # Parse datas e campos opcionais
-        data_inicio = datetime.strptime(data['data_inicio'], '%Y-%m-%d').date() if data.get('data_inicio') else None
-        data_fim = datetime.strptime(data['data_fim'], '%Y-%m-%d').date() if data.get('data_fim') else None
-        custo = float(data['custo']) if data.get('custo') not in (None, '') else None
-
-        manutencao = Manutencao(
-            equipamento_id=equipamento.id,
-            tipo=data.get('tipo', 'Corretiva'),
-            descricao=data.get('descricao'),
-            data_inicio=data_inicio,
-            data_fim=data_fim,
-            custo=custo,
-            responsavel=data.get('responsavel'),
-            fornecedor=data.get('fornecedor'),
-            status=data.get('status', 'Em Andamento')
-        )
+        try:
+            data_inicio = datetime.strptime(data['data_inicio'], '%Y-%m-%d').date().isoformat() if data.get('data_inicio') else None
+        except:
+            data_inicio = None
+        
+        try:
+            data_fim = datetime.strptime(data['data_fim'], '%Y-%m-%d').date().isoformat() if data.get('data_fim') else None
+        except:
+            data_fim = None
+        
+        try:
+            custo = float(data['custo']) if data.get('custo') not in (None, '') else None
+        except:
+            custo = None
 
         # Atualiza status do equipamento se solicitado
         if data.get('atualizar_status_equipamento', True):
-            if manutencao.status == 'Em Andamento':
-                equipamento.status = 'Manutenção'
-            elif manutencao.status == 'Concluída' and equipamento.status == 'Manutenção':
-                # Não forçamos retorno ao Estoque automaticamente sem contexto; opcional
-                pass
+            if data.get('status', 'Em Andamento') == 'Em Andamento':
+                Equipamento.update(equipamento_id, {'status': 'Manutenção'})
 
-        manutencao = Manutencao.create(
-            equipamento_id=equipamento.id,
-            tipo=data.get('tipo', 'Corretiva'),
-            descricao=data.get('descricao'),
-            data_inicio=data_inicio,
-            data_fim=data_fim,
-            custo=custo,
-            responsavel=data.get('responsavel'),
-            fornecedor=data.get('fornecedor'),
-            status=data.get('status', 'Em Andamento')
-        )
+        # Cria a manutenção
+        manutencao = Manutencao.create({
+            'equipamento_id': equipamento_id,
+            'tipo': data.get('tipo', 'Corretiva'),
+            'descricao': data.get('descricao'),
+            'data_inicio': data_inicio,
+            'data_fim': data_fim,
+            'custo': custo,
+            'responsavel': data.get('responsavel'),
+            'fornecedor': data.get('fornecedor'),
+            'status': data.get('status', 'Em Andamento'),
+            'data_registro': datetime.utcnow().isoformat()
+        })
 
         return jsonify({'success': True, 'message': 'Manutenção registrada com sucesso!', 'manutencao': manutencao.to_dict()})
 
     except Exception as e:
+        current_app.logger.error(f'Erro ao adicionar manutenção: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'message': f'Erro ao adicionar manutenção: {str(e)}'}), 400
 
 
@@ -1126,37 +1138,43 @@ def adicionar_emprestimo():
         data = request.json
         
         # Verifica se o equipamento existe e está em estoque
-        equipamento = Equipamento.query.get(data['equipamento_id'])
+        equipamento = Equipamento.get_by_id(data['equipamento_id'])
         if not equipamento:
             return jsonify({
                 'success': False,
                 'message': 'Equipamento não encontrado'
             }), 404
-            
-        if equipamento.status != 'Estoque':
+        
+        eq_dict = equipamento.to_dict()
+        if eq_dict.get('status') != 'Estoque':
             return jsonify({
                 'success': False,
-                'message': f'Equipamento não está disponível. Status atual: {equipamento.status}'
+                'message': f'Equipamento não está disponível. Status atual: {eq_dict.get("status")}'
             }), 400
         
         # Converte a data de devolução prevista se fornecida
         data_devolucao_prevista = None
         if data.get('data_devolucao_prevista'):
-            data_devolucao_prevista = datetime.strptime(data['data_devolucao_prevista'], '%Y-%m-%d').date().isoformat()
+            try:
+                data_devolucao_prevista = datetime.strptime(data['data_devolucao_prevista'], '%Y-%m-%d').date().isoformat()
+            except:
+                pass
         
         # Cria o empréstimo
-        emprestimo = Emprestimo.create(
-            equipamento_id=data['equipamento_id'],
-            responsavel=data['responsavel'],
-            departamento=data['departamento'],
-            email_responsavel=data.get('email_responsavel'),
-            telefone_responsavel=data.get('telefone_responsavel'),
-            data_devolucao_prevista=data_devolucao_prevista,
-            observacoes=data.get('observacoes')
-        )
+        emprestimo = Emprestimo.create({
+            'equipamento_id': data['equipamento_id'],
+            'responsavel': data['responsavel'],
+            'departamento': data['departamento'],
+            'email_responsavel': data.get('email_responsavel'),
+            'telefone_responsavel': data.get('telefone_responsavel'),
+            'data_devolucao_prevista': data_devolucao_prevista,
+            'observacoes': data.get('observacoes'),
+            'status': 'Ativo',
+            'data_emprestimo': datetime.utcnow().date().isoformat()
+        })
         
         # Atualiza o status do equipamento para Emprestado
-        equipamento.update(status='Emprestado')
+        Equipamento.update(data['equipamento_id'], {'status': 'Emprestado'})
         
         # Envia e-mail de confirmação
         from app.email_service import enviar_email_confirmacao_emprestimo
@@ -1173,6 +1191,7 @@ def adicionar_emprestimo():
         }), 201
         
     except Exception as e:
+        current_app.logger.error(f'Erro ao registrar empréstimo: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao registrar empréstimo: {str(e)}'
@@ -1183,7 +1202,9 @@ def adicionar_emprestimo():
 def devolver_emprestimo(id):
     """Registra a devolução de um empréstimo"""
     try:
-        emprestimo = Emprestimo.query.get_or_404(id)
+        emprestimo = Emprestimo.get_by_id(id)
+        if not emprestimo:
+            return jsonify({'success': False, 'message': 'Empréstimo não encontrado'}), 404
         
         if emprestimo.status == 'Devolvido':
             return jsonify({
@@ -1192,20 +1213,23 @@ def devolver_emprestimo(id):
             }), 400
         
         # Registra a devolução
-        emprestimo.data_devolucao_real = datetime.utcnow()
-        emprestimo.status = 'Devolvido'
+        Emprestimo.update(id, {
+            'data_devolucao_real': datetime.utcnow().isoformat(),
+            'status': 'Devolvido'
+        })
         
         # Atualiza o status do equipamento de volta para Estoque
-        equipamento = Equipamento.query.get(emprestimo.equipamento_id)
+        equipamento = Equipamento.get_by_id(emprestimo.equipamento_id)
         if equipamento:
-            equipamento.status = 'Estoque'
+            Equipamento.update(emprestimo.equipamento_id, {'status': 'Estoque'})
         
-        db.session.commit()
+        # Recarregar empréstimo para retornar dados atualizados
+        emprestimo_atualizado = Emprestimo.get_by_id(id)
         
         # Envia e-mail de confirmação de devolução
         from app.email_service import enviar_email_confirmacao_devolucao
         try:
-            enviar_email_confirmacao_devolucao(current_app._get_current_object(), emprestimo)
+            enviar_email_confirmacao_devolucao(current_app._get_current_object(), emprestimo_atualizado)
         except Exception as e:
             # Não falha a operação se o email não for enviado
             current_app.logger.warning(f'Falha ao enviar e-mail de devolução: {str(e)}')
@@ -1213,11 +1237,11 @@ def devolver_emprestimo(id):
         return jsonify({
             'success': True,
             'message': 'Devolução registrada com sucesso!',
-            'emprestimo': emprestimo.to_dict()
+            'emprestimo': emprestimo_atualizado.to_dict()
         })
         
     except Exception as e:
-        db.session.rollback()
+        current_app.logger.error(f'Erro ao registrar devolução: {str(e)}', exc_info=True)
         return jsonify({
             'success': False,
             'message': f'Erro ao registrar devolução: {str(e)}'
@@ -1257,6 +1281,8 @@ def deletar_emprestimo(id):
 def emprestimos_notificacoes():
     """Retorna empréstimos próximos ao vencimento e atrasados"""
     try:
+        from datetime import timedelta
+        
         dias_alerta = int(request.args.get('dias', 3))  # Padrão: 3 dias antes
         hoje = datetime.utcnow().date()
         data_limite = hoje + timedelta(days=dias_alerta)
