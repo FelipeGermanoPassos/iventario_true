@@ -10,6 +10,14 @@ logger = logging.getLogger(__name__)
 # Add parent directory to path to import app module
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# CRITICAL: Apply IPv4-only socket patch BEFORE any other imports
+# This must be done before psycopg2 or any networking library is imported
+try:
+    from app.socket_patch import *
+    logger.info("IPv4 socket patch applied successfully")
+except Exception as e:
+    logger.warning(f"Failed to apply socket patch: {e}")
+
 logger.info("Starting application initialization...")
 logger.info(f"Python path: {sys.path}")
 logger.info(f"Current directory: {os.getcwd()}")
