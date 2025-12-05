@@ -386,14 +386,7 @@ def editar_usuario(id):
             'usuario': usuario.to_dict()
         })
         
-        return jsonify({
-            'success': True,
-            'message': 'Usuário atualizado com sucesso!',
-            'usuario': usuario.to_dict()
-        })
-        
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao atualizar usuário: {str(e)}'}), 400
 
 
@@ -975,13 +968,21 @@ def adicionar_manutencao(equipamento_id):
                 # Não forçamos retorno ao Estoque automaticamente sem contexto; opcional
                 pass
 
-        db.session.add(manutencao)
-        db.session.commit()
+        manutencao = Manutencao.create(
+            equipamento_id=equipamento.id,
+            tipo=data.get('tipo', 'Corretiva'),
+            descricao=data.get('descricao'),
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            custo=custo,
+            responsavel=data.get('responsavel'),
+            fornecedor=data.get('fornecedor'),
+            status=data.get('status', 'Em Andamento')
+        )
 
         return jsonify({'success': True, 'message': 'Manutenção registrada com sucesso!', 'manutencao': manutencao.to_dict()})
 
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao adicionar manutenção: {str(e)}'}), 400
 
 
@@ -990,12 +991,12 @@ def adicionar_manutencao(equipamento_id):
 def deletar_manutencao(id):
     """Remove um registro de manutenção"""
     try:
-        manutencao = Manutencao.query.get_or_404(id)
-        db.session.delete(manutencao)
-        db.session.commit()
+        manutencao = Manutencao.get_by_id(id)
+        if not manutencao:
+            return jsonify({'success': False, 'message': 'Manutenção não encontrada'}), 404
+        manutencao.delete()
         return jsonify({'success': True, 'message': 'Manutenção deletada com sucesso!'})
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao deletar manutenção: {str(e)}'}), 400
 
 
@@ -1004,7 +1005,9 @@ def deletar_manutencao(id):
 def obter_manutencao(id):
     """Obtém uma manutenção específica"""
     try:
-        manutencao = Manutencao.query.get_or_404(id)
+        manutencao = Manutencao.get_by_id(id)
+        if not manutencao:
+            return jsonify({'success': False, 'message': 'Manutenção não encontrada'}), 404
         return jsonify({'success': True, 'manutencao': manutencao.to_dict()})
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao obter manutenção: {str(e)}'}), 400
@@ -1105,10 +1108,10 @@ def adicionar_emprestimo():
         # Converte a data de devolução prevista se fornecida
         data_devolucao_prevista = None
         if data.get('data_devolucao_prevista'):
-            data_devolucao_prevista = datetime.strptime(data['data_devolucao_prevista'], '%Y-%m-%d').date()
+            data_devolucao_prevista = datetime.strptime(data['data_devolucao_prevista'], '%Y-%m-%d').date().isoformat()
         
         # Cria o empréstimo
-        emprestimo = Emprestimo(
+        emprestimo = Emprestimo.create(
             equipamento_id=data['equipamento_id'],
             responsavel=data['responsavel'],
             departamento=data['departamento'],
@@ -1119,10 +1122,7 @@ def adicionar_emprestimo():
         )
         
         # Atualiza o status do equipamento para Emprestado
-        equipamento.status = 'Emprestado'
-        
-        db.session.add(emprestimo)
-        db.session.commit()
+        equipamento.update(status='Emprestado')
         
         # Envia e-mail de confirmação
         from app.email_service import enviar_email_confirmacao_emprestimo
@@ -1139,7 +1139,6 @@ def adicionar_emprestimo():
         }), 201
         
     except Exception as e:
-        db.session.rollback()
         return jsonify({
             'success': False,
             'message': f'Erro ao registrar empréstimo: {str(e)}'
@@ -1195,16 +1194,17 @@ def devolver_emprestimo(id):
 def deletar_emprestimo(id):
     """Deleta um empréstimo"""
     try:
-        emprestimo = Emprestimo.query.get_or_404(id)
+        emprestimo = Emprestimo.get_by_id(id)
+        if not emprestimo:
+            return jsonify({'success': False, 'message': 'Empréstimo não encontrado'}), 404
         
         # Se o empréstimo estava ativo, retorna o equipamento ao estoque
         if emprestimo.status == 'Ativo':
-            equipamento = Equipamento.query.get(emprestimo.equipamento_id)
+            equipamento = Equipamento.get_by_id(emprestimo.equipamento_id)
             if equipamento and equipamento.status == 'Emprestado':
-                equipamento.status = 'Estoque'
+                equipamento.update(status='Estoque')
         
-        db.session.delete(emprestimo)
-        db.session.commit()
+        emprestimo.delete()
         
         return jsonify({
             'success': True,
@@ -1212,7 +1212,6 @@ def deletar_emprestimo(id):
         })
         
     except Exception as e:
-        db.session.rollback()
         return jsonify({
             'success': False,
             'message': f'Erro ao deletar empréstimo: {str(e)}'
