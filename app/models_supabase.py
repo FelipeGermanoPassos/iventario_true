@@ -287,5 +287,288 @@ class Equipamento:
         return counts
 
 
-# Placeholder para outros modelos (Emprestimo, etc)
-# Implementar conforme necessário usando o mesmo padrão
+class Emprestimo:
+    """Modelo para empréstimos de equipamentos"""
+    
+    def __init__(self, data: Dict[str, Any]):
+        self.id = data.get('id')
+        self.equipamento_id = data.get('equipamento_id')
+        self.responsavel = data.get('responsavel')
+        self.departamento = data.get('departamento')
+        self.email_responsavel = data.get('email_responsavel')
+        self.telefone_responsavel = data.get('telefone_responsavel')
+        self.telegram_chat_id = data.get('telegram_chat_id')
+        self.data_emprestimo = data.get('data_emprestimo')
+        self.data_devolucao_prevista = data.get('data_devolucao_prevista')
+        self.data_devolucao_real = data.get('data_devolucao_real')
+        self.status = data.get('status', 'Ativo')
+        self.observacoes = data.get('observacoes')
+        # Relacionamento com equipamento (se incluído no select)
+        self.equipamento = None
+        if 'equipamentos' in data:
+            self.equipamento = Equipamento(data['equipamentos'])
+    
+    def to_dict(self) -> Dict[str, Any]:
+        result = {
+            'id': self.id,
+            'equipamento_id': self.equipamento_id,
+            'responsavel': self.responsavel,
+            'departamento': self.departamento,
+            'email_responsavel': self.email_responsavel,
+            'telefone_responsavel': self.telefone_responsavel,
+            'telegram_chat_id': self.telegram_chat_id,
+            'data_emprestimo': self.data_emprestimo,
+            'data_devolucao_prevista': self.data_devolucao_prevista,
+            'data_devolucao_real': self.data_devolucao_real,
+            'status': self.status,
+            'observacoes': self.observacoes
+        }
+        if self.equipamento:
+            result['equipamento'] = self.equipamento.to_dict()
+            result['equipamento_nome'] = f"{self.equipamento.nome} - {self.equipamento.marca} {self.equipamento.modelo}"
+        return result
+    
+    @staticmethod
+    def get_by_id(emprestimo_id: int) -> Optional['Emprestimo']:
+        try:
+            client = get_supabase_client()
+            response = client.table('emprestimos').select('*, equipamentos(*)').eq('id', emprestimo_id).execute()
+            if response.data and len(response.data) > 0:
+                return Emprestimo(response.data[0])
+            return None
+        except Exception as e:
+            print(f"Erro ao buscar empréstimo: {e}")
+            return None
+    
+    @staticmethod
+    def get_all() -> List['Emprestimo']:
+        client = get_supabase_client()
+        response = client.table('emprestimos').select('*, equipamentos(*)').execute()
+        return [Emprestimo(emp) for emp in response.data]
+    
+    @staticmethod
+    def create(**kwargs) -> 'Emprestimo':
+        data = {
+            'equipamento_id': kwargs.get('equipamento_id'),
+            'responsavel': kwargs.get('responsavel'),
+            'departamento': kwargs.get('departamento'),
+            'email_responsavel': kwargs.get('email_responsavel'),
+            'telefone_responsavel': kwargs.get('telefone_responsavel'),
+            'telegram_chat_id': kwargs.get('telegram_chat_id'),
+            'data_emprestimo': kwargs.get('data_emprestimo', datetime.utcnow().isoformat()),
+            'data_devolucao_prevista': kwargs.get('data_devolucao_prevista'),
+            'status': kwargs.get('status', 'Ativo'),
+            'observacoes': kwargs.get('observacoes')
+        }
+        client = get_supabase_client()
+        response = client.table('emprestimos').insert(data).execute()
+        return Emprestimo(response.data[0])
+    
+    def update(self, **kwargs):
+        client = get_supabase_client()
+        update_data = {k: v for k, v in kwargs.items() if k != 'id'}
+        if update_data:
+            client.table('emprestimos').update(update_data).eq('id', self.id).execute()
+            for key, value in kwargs.items():
+                if hasattr(self, key):
+                    setattr(self, key, value)
+    
+    def delete(self):
+        client = get_supabase_client()
+        client.table('emprestimos').delete().eq('id', self.id).execute()
+
+
+class EquipamentoFoto:
+    """Fotos associadas a equipamentos"""
+    
+    def __init__(self, data: Dict[str, Any]):
+        self.id = data.get('id')
+        self.equipamento_id = data.get('equipamento_id')
+        self.url = data.get('url')
+        self.principal = data.get('principal', True)
+        self.data_upload = data.get('data_upload')
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'id': self.id,
+            'equipamento_id': self.equipamento_id,
+            'url': self.url,
+            'principal': self.principal,
+            'data_upload': self.data_upload
+        }
+    
+    @staticmethod
+    def get_by_equipamento(equipamento_id: int) -> List['EquipamentoFoto']:
+        client = get_supabase_client()
+        response = client.table('equipamentos_fotos').select('*').eq('equipamento_id', equipamento_id).execute()
+        return [EquipamentoFoto(foto) for foto in response.data]
+    
+    @staticmethod
+    def create(**kwargs) -> 'EquipamentoFoto':
+        data = {
+            'equipamento_id': kwargs.get('equipamento_id'),
+            'url': kwargs.get('url'),
+            'principal': kwargs.get('principal', True),
+            'data_upload': datetime.utcnow().isoformat()
+        }
+        client = get_supabase_client()
+        response = client.table('equipamentos_fotos').insert(data).execute()
+        return EquipamentoFoto(response.data[0])
+    
+    def delete(self):
+        client = get_supabase_client()
+        client.table('equipamentos_fotos').delete().eq('id', self.id).execute()
+
+
+class Manutencao:
+    """Histórico de manutenções de equipamentos"""
+    
+    def __init__(self, data: Dict[str, Any]):
+        self.id = data.get('id')
+        self.equipamento_id = data.get('equipamento_id')
+        self.tipo = data.get('tipo')
+        self.descricao = data.get('descricao')
+        self.data_inicio = data.get('data_inicio')
+        self.data_fim = data.get('data_fim')
+        self.custo = data.get('custo')
+        self.responsavel = data.get('responsavel')
+        self.fornecedor = data.get('fornecedor')
+        self.status = data.get('status', 'Em Andamento')
+        self.data_registro = data.get('data_registro')
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'id': self.id,
+            'equipamento_id': self.equipamento_id,
+            'tipo': self.tipo,
+            'descricao': self.descricao,
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+            'custo': self.custo,
+            'responsavel': self.responsavel,
+            'fornecedor': self.fornecedor,
+            'status': self.status,
+            'data_registro': self.data_registro
+        }
+    
+    @staticmethod
+    def get_by_id(manutencao_id: int) -> Optional['Manutencao']:
+        try:
+            client = get_supabase_client()
+            response = client.table('manutencoes').select('*').eq('id', manutencao_id).execute()
+            if response.data and len(response.data) > 0:
+                return Manutencao(response.data[0])
+            return None
+        except Exception as e:
+            print(f"Erro ao buscar manutenção: {e}")
+            return None
+    
+    @staticmethod
+    def get_by_equipamento(equipamento_id: int) -> List['Manutencao']:
+        client = get_supabase_client()
+        response = client.table('manutencoes').select('*').eq('equipamento_id', equipamento_id).execute()
+        return [Manutencao(man) for man in response.data]
+    
+    @staticmethod
+    def create(**kwargs) -> 'Manutencao':
+        data = {
+            'equipamento_id': kwargs.get('equipamento_id'),
+            'tipo': kwargs.get('tipo'),
+            'descricao': kwargs.get('descricao'),
+            'data_inicio': kwargs.get('data_inicio'),
+            'data_fim': kwargs.get('data_fim'),
+            'custo': kwargs.get('custo'),
+            'responsavel': kwargs.get('responsavel'),
+            'fornecedor': kwargs.get('fornecedor'),
+            'status': kwargs.get('status', 'Em Andamento'),
+            'data_registro': datetime.utcnow().isoformat()
+        }
+        client = get_supabase_client()
+        response = client.table('manutencoes').insert(data).execute()
+        return Manutencao(response.data[0])
+    
+    def update(self, **kwargs):
+        client = get_supabase_client()
+        update_data = {k: v for k, v in kwargs.items() if k != 'id'}
+        if update_data:
+            client.table('manutencoes').update(update_data).eq('id', self.id).execute()
+            for key, value in kwargs.items():
+                if hasattr(self, key):
+                    setattr(self, key, value)
+    
+    def delete(self):
+        client = get_supabase_client()
+        client.table('manutencoes').delete().eq('id', self.id).execute()
+
+
+class PushSubscription:
+    """Armazena subscrições de push notifications dos usuários"""
+    
+    def __init__(self, data: Dict[str, Any]):
+        self.id = data.get('id')
+        self.usuario_id = data.get('usuario_id')
+        self.endpoint = data.get('endpoint')
+        self.p256dh = data.get('p256dh')
+        self.auth = data.get('auth')
+        self.user_agent = data.get('user_agent')
+        self.data_criacao = data.get('data_criacao')
+        self.ativa = data.get('ativa', True)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'endpoint': self.endpoint,
+            'keys': {
+                'p256dh': self.p256dh,
+                'auth': self.auth
+            },
+            'data_criacao': self.data_criacao,
+            'ativa': self.ativa
+        }
+    
+    @staticmethod
+    def get_by_endpoint(endpoint: str) -> Optional['PushSubscription']:
+        try:
+            client = get_supabase_client()
+            response = client.table('push_subscriptions').select('*').eq('endpoint', endpoint).execute()
+            if response.data and len(response.data) > 0:
+                return PushSubscription(response.data[0])
+            return None
+        except Exception as e:
+            print(f"Erro ao buscar subscription: {e}")
+            return None
+    
+    @staticmethod
+    def get_by_usuario(usuario_id: int) -> List['PushSubscription']:
+        client = get_supabase_client()
+        response = client.table('push_subscriptions').select('*').eq('usuario_id', usuario_id).eq('ativa', True).execute()
+        return [PushSubscription(sub) for sub in response.data]
+    
+    @staticmethod
+    def create(**kwargs) -> 'PushSubscription':
+        data = {
+            'usuario_id': kwargs.get('usuario_id'),
+            'endpoint': kwargs.get('endpoint'),
+            'p256dh': kwargs.get('p256dh'),
+            'auth': kwargs.get('auth'),
+            'user_agent': kwargs.get('user_agent'),
+            'data_criacao': datetime.utcnow().isoformat(),
+            'ativa': True
+        }
+        client = get_supabase_client()
+        response = client.table('push_subscriptions').insert(data).execute()
+        return PushSubscription(response.data[0])
+    
+    def update(self, **kwargs):
+        client = get_supabase_client()
+        update_data = {k: v for k, v in kwargs.items() if k != 'id'}
+        if update_data:
+            client.table('push_subscriptions').update(update_data).eq('id', self.id).execute()
+            for key, value in kwargs.items():
+                if hasattr(self, key):
+                    setattr(self, key, value)
+    
+    def delete(self):
+        client = get_supabase_client()
+        client.table('push_subscriptions').delete().eq('id', self.id).execute()

@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, make_response, current_app, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models_supabase import Usuario, Equipamento
-# TODO: Migrar Emprestimo, EquipamentoFoto, Manutencao para models_supabase.py
+from app.models_supabase import Usuario, Equipamento, Emprestimo, EquipamentoFoto, Manutencao, PushSubscription
 try:
     from app.prediction_service import prediction_service
     _prediction_import_error = None
@@ -677,14 +676,16 @@ def dashboard_data():
 @login_required
 def listar_equipamentos():
     """Lista todos os equipamentos"""
-    equipamentos = Equipamento.query.order_by(Equipamento.data_cadastro.desc()).all()
+    equipamentos = Equipamento.get_all()
     return jsonify([eq.to_dict() for eq in equipamentos])
 
 @main.route('/equipamento/<int:id>')
 @login_required
 def obter_equipamento(id):
     """Obtém um equipamento específico"""
-    equipamento = Equipamento.query.get_or_404(id)
+    equipamento = Equipamento.get_by_id(id)
+    if not equipamento:
+        return jsonify({'success': False, 'message': 'Equipamento não encontrado'}), 404
     return jsonify(equipamento.to_dict())
 
 def _allowed_image(filename: str):
@@ -729,7 +730,7 @@ def adicionar_equipamento():
         if data.get('data_aquisicao'):
             data_aquisicao = datetime.strptime(data['data_aquisicao'], '%Y-%m-%d').date()
         
-        equipamento = Equipamento(
+        equipamento = Equipamento.create(
             nome=data['nome'],
             tipo=data['tipo'],
             marca=data['marca'],
@@ -740,13 +741,10 @@ def adicionar_equipamento():
             armazenamento=data.get('armazenamento'),
             sistema_operacional=data.get('sistema_operacional'),
             status=data['status'],
-            data_aquisicao=data_aquisicao,
+            data_aquisicao=data_aquisicao.isoformat() if data_aquisicao else None,
             valor=float(data.get('valor', 0)) if data.get('valor') else None,
             observacoes=data.get('observacoes')
         )
-        
-        db.session.add(equipamento)
-        db.session.flush()  # obter ID antes de possível foto
 
         # Foto (opcional)
         if is_multipart and 'foto' in request.files:
@@ -754,11 +752,7 @@ def adicionar_equipamento():
             if foto_file and foto_file.filename:
                 url = _save_equip_photo(foto_file)
                 if url:
-                    # Desmarcar outras principais por segurança (novo equipamento não terá)
-                    foto = EquipamentoFoto(equipamento_id=equipamento.id, url=url, principal=True)
-                    db.session.add(foto)
-
-        db.session.commit()
+                    EquipamentoFoto.create(equipamento_id=equipamento.id, url=url, principal=True)
         
         return jsonify({
             'success': True,
@@ -767,7 +761,6 @@ def adicionar_equipamento():
         }), 201
         
     except Exception as e:
-        db.session.rollback()
         return jsonify({
             'success': False,
             'message': f'Erro ao adicionar equipamento: {str(e)}'
@@ -778,7 +771,10 @@ def adicionar_equipamento():
 def editar_equipamento(id):
     """Edita um equipamento existente"""
     try:
-        equipamento = Equipamento.query.get_or_404(id)
+        equipamento = Equipamento.get_by_id(id)
+        if not equipamento:
+            return jsonify({'success': False, 'message': 'Equipamento não encontrado'}), 404
+            
         is_multipart = request.content_type and 'multipart/form-data' in request.content_type
         if is_multipart:
             form = request.form
@@ -786,24 +782,38 @@ def editar_equipamento(id):
         else:
             data = request.get_json(silent=True) or {}
         
-        # Atualiza os campos
-        equipamento.nome = data.get('nome', equipamento.nome)
-        equipamento.tipo = data.get('tipo', equipamento.tipo)
-        equipamento.marca = data.get('marca', equipamento.marca)
-        equipamento.modelo = data.get('modelo', equipamento.modelo)
-        equipamento.numero_serie = data.get('numero_serie', equipamento.numero_serie)
-        equipamento.processador = data.get('processador', equipamento.processador)
-        equipamento.memoria_ram = data.get('memoria_ram', equipamento.memoria_ram)
-        equipamento.armazenamento = data.get('armazenamento', equipamento.armazenamento)
-        equipamento.sistema_operacional = data.get('sistema_operacional', equipamento.sistema_operacional)
-        equipamento.status = data.get('status', equipamento.status)
-        equipamento.observacoes = data.get('observacoes', equipamento.observacoes)
+        # Prepara dados para atualização
+        update_data = {}
+        if 'nome' in data:
+            update_data['nome'] = data['nome']
+        if 'tipo' in data:
+            update_data['tipo'] = data['tipo']
+        if 'marca' in data:
+            update_data['marca'] = data['marca']
+        if 'modelo' in data:
+            update_data['modelo'] = data['modelo']
+        if 'numero_serie' in data:
+            update_data['numero_serie'] = data['numero_serie']
+        if 'processador' in data:
+            update_data['processador'] = data['processador']
+        if 'memoria_ram' in data:
+            update_data['memoria_ram'] = data['memoria_ram']
+        if 'armazenamento' in data:
+            update_data['armazenamento'] = data['armazenamento']
+        if 'sistema_operacional' in data:
+            update_data['sistema_operacional'] = data['sistema_operacional']
+        if 'status' in data:
+            update_data['status'] = data['status']
+        if 'observacoes' in data:
+            update_data['observacoes'] = data['observacoes']
         
         if data.get('data_aquisicao'):
-            equipamento.data_aquisicao = datetime.strptime(data['data_aquisicao'], '%Y-%m-%d').date()
+            update_data['data_aquisicao'] = datetime.strptime(data['data_aquisicao'], '%Y-%m-%d').date().isoformat()
         
         if data.get('valor'):
-            equipamento.valor = float(data['valor'])
+            update_data['valor'] = float(data['valor'])
+        
+        equipamento.update(**update_data)
 
         # Substituição de foto (opcional)
         if is_multipart and 'foto' in request.files:
@@ -811,13 +821,7 @@ def editar_equipamento(id):
             if foto_file and foto_file.filename:
                 url = _save_equip_photo(foto_file)
                 if url:
-                    # Desmarca anteriores como principal e adiciona nova principal
-                    for f in equipamento.fotos:
-                        f.principal = False
-                    nova = EquipamentoFoto(equipamento_id=equipamento.id, url=url, principal=True)
-                    db.session.add(nova)
-        
-        db.session.commit()
+                    EquipamentoFoto.create(equipamento_id=equipamento.id, url=url, principal=True)
         
         return jsonify({
             'success': True,
@@ -826,7 +830,6 @@ def editar_equipamento(id):
         })
         
     except Exception as e:
-        db.session.rollback()
         return jsonify({
             'success': False,
             'message': f'Erro ao atualizar equipamento: {str(e)}'
@@ -837,9 +840,10 @@ def editar_equipamento(id):
 def deletar_equipamento(id):
     """Deleta um equipamento"""
     try:
-        equipamento = Equipamento.query.get_or_404(id)
-        db.session.delete(equipamento)
-        db.session.commit()
+        equipamento = Equipamento.get_by_id(id)
+        if not equipamento:
+            return jsonify({'success': False, 'message': 'Equipamento não encontrado'}), 404
+        equipamento.delete()
         
         return jsonify({
             'success': True,
@@ -847,7 +851,6 @@ def deletar_equipamento(id):
         })
         
     except Exception as e:
-        db.session.rollback()
         return jsonify({
             'success': False,
             'message': f'Erro ao deletar equipamento: {str(e)}'
