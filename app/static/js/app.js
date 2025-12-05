@@ -143,34 +143,63 @@ async function carregarDashboard() {
     try {
         const response = await fetch('/dashboard-data');
         const data = await response.json();
+        
+        if (!data) {
+            console.error('Dashboard data is empty');
+            return;
+        }
 
-        // Atualizar estatísticas básicas
-        document.getElementById('totalEquipamentos').textContent = data.total_equipamentos;
-        document.getElementById('equipamentosEstoque').textContent = data.equipamentos_estoque;
-        document.getElementById('equipamentosEmprestados').textContent = data.equipamentos_emprestados;
+        // Atualizar estatísticas básicas (com fallbacks)
+        const totalEq = document.getElementById('totalEquipamentos');
+        const eqEstoque = document.getElementById('equipamentosEstoque');
+        const eqEmprestados = document.getElementById('equipamentosEmprestados');
+        
+        if (totalEq) totalEq.textContent = data.total_equipamentos || 0;
+        if (eqEstoque) eqEstoque.textContent = data.equipamentos_estoque || 0;
+        if (eqEmprestados) eqEmprestados.textContent = data.equipamentos_emprestados || 0;
         
         // Novas métricas
-        document.getElementById('equipamentosManutencao').textContent = data.equipamentos_manutencao || 0;
-        document.getElementById('taxaUtilizacao').textContent = `${data.taxa_utilizacao || 0}%`;
-        document.getElementById('emprestimosRecentes').textContent = data.emprestimos_recentes || 0;
-        document.getElementById('manutencoesPendentes').textContent = data.manutencoes_pendentes || 0;
+        const eqManut = document.getElementById('equipamentosManutencao');
+        if (eqManut) eqManut.textContent = data.equipamentos_manutencao || 0;
+        
+        const taxaUtil = document.getElementById('taxaUtilizacao');
+        if (taxaUtil) taxaUtil.textContent = `${data.taxa_utilizacao || 0}%`;
+        
+        const empRecentes = document.getElementById('emprestimosRecentes');
+        if (empRecentes) empRecentes.textContent = data.emprestimos_recentes || 0;
+        
+        const manutPend = document.getElementById('manutencoesPendentes');
+        if (manutPend) manutPend.textContent = data.manutencoes_pendentes || 0;
         
         // Valores monetários
-        document.getElementById('valorTotal').textContent = 
-            `R$ ${data.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('valorMedio').textContent = 
-            `R$ ${data.valor_medio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('custoManutencoes').textContent = 
-            `R$ ${data.custo_manutencoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        const valorTotal = document.getElementById('valorTotal');
+        if (valorTotal) {
+            const val = (data.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            valorTotal.textContent = `R$ ${val}`;
+        }
+        
+        const valorMedio = document.getElementById('valorMedio');
+        if (valorMedio) {
+            const val = (data.valor_medio || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            valorMedio.textContent = `R$ ${val}`;
+        }
+        
+        const custoManut = document.getElementById('custoManutencoes');
+        if (custoManut) {
+            const val = (data.custo_manutencoes || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            custoManut.textContent = `R$ ${val}`;
+        }
 
-        // Criar gráficos
-        criarGraficos(data);
+        // Criar gráficos (com verificação de dados)
+        if (data.status && data.tipos && data.emprestimos_por_departamento) {
+            criarGraficos(data);
+        }
         
         // Carregar notificações
         await carregarNotificacoes();
     } catch (error) {
         console.error('Erro ao carregar dashboard:', error);
-        mostrarAlerta('Erro ao carregar dashboard', 'error');
+        mostrarAlerta('Erro ao carregar dashboard: ' + error.message, 'error');
     }
 }
 
@@ -233,68 +262,82 @@ function mostrarNotificacoes() {
 }
 
 function criarGraficos(data) {
+    // Validar dados antes de criar gráficos
+    if (!data || !data.status || !data.tipos || !data.emprestimos_por_departamento) {
+        console.warn('Dados incompletos para criar gráficos');
+        return;
+    }
+    
     // Gráfico de Status
-    const statusCtx = document.getElementById('statusChart').getContext('2d');
-    if (charts.status) charts.status.destroy();
-    charts.status = new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: data.status.map(s => s.name),
-            datasets: [{
-                data: data.status.map(s => s.value),
-                backgroundColor: ['#10b981', '#EF7D2D', '#ef4444', '#f59e0b'],
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
-
-    // Gráfico de Tipos
-    const tipoCtx = document.getElementById('tipoChart').getContext('2d');
-    if (charts.tipo) charts.tipo.destroy();
-    charts.tipo = new Chart(tipoCtx, {
-        type: 'bar',
-        data: {
-            labels: data.tipos.map(t => t.name),
-            datasets: [{
-                label: 'Quantidade',
-                data: data.tipos.map(t => t.value),
-                backgroundColor: '#EF7D2D',
-                borderRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
+    const statusChart = document.getElementById('statusChart');
+    if (statusChart) {
+        const statusCtx = statusChart.getContext('2d');
+        if (charts.status) charts.status.destroy();
+        charts.status = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: data.status.map(s => s.name),
+                datasets: [{
+                    data: data.status.map(s => s.value),
+                    backgroundColor: ['#10b981', '#EF7D2D', '#ef4444', '#f59e0b'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
                     }
                 }
             }
-        }
-    });
+        });
+    }
+
+    // Gráfico de Tipos
+    const tipoChart = document.getElementById('tipoChart');
+    if (tipoChart) {
+        const tipoCtx = tipoChart.getContext('2d');
+        if (charts.tipo) charts.tipo.destroy();
+        charts.tipo = new Chart(tipoCtx, {
+            type: 'bar',
+            data: {
+                labels: data.tipos.map(t => t.name),
+                datasets: [{
+                    label: 'Quantidade',
+                    data: data.tipos.map(t => t.value),
+                    backgroundColor: '#EF7D2D',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     // Gráfico de Empréstimos por Departamento
-    const deptCtx = document.getElementById('departamentoChart').getContext('2d');
-    if (charts.departamento) charts.departamento.destroy();
-    charts.departamento = new Chart(deptCtx, {
+    const deptChart = document.getElementById('departamentoChart');
+    if (deptChart) {
+        const deptCtx = deptChart.getContext('2d');
+        if (charts.departamento) charts.departamento.destroy();
+        charts.departamento = new Chart(deptCtx, {
         type: 'bar',
         data: {
             labels: data.emprestimos_por_departamento.map(d => d.name),

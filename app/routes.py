@@ -586,6 +586,16 @@ def favicon():
     """Serve o favicon"""
     return send_from_directory(os.path.join(current_app.root_path, 'static'), 'favicon.ico', mimetype='image/x-icon')
 
+@main.route('/static/icons/icon-192.png')
+def icon_192():
+    """Serve o ícone PWA 192x192"""
+    return send_from_directory(os.path.join(current_app.root_path, 'static', 'icons'), 'icon-192.png', mimetype='image/png')
+
+@main.route('/static/icons/icon-512.png')
+def icon_512():
+    """Serve o ícone PWA 512x512"""
+    return send_from_directory(os.path.join(current_app.root_path, 'static', 'icons'), 'icon-512.png', mimetype='image/png')
+
 @main.route('/sw.js')
 def service_worker():
     """Serve o Service Worker na raiz para escopo global."""
@@ -600,48 +610,57 @@ def dashboard_data():
         from datetime import timedelta
         
         # Busca todos os dados uma vez
-        equipamentos_all = Equipamento.get_all()
-        emprestimos_all = Emprestimo.get_all()
-        manutencoes_all = Manutencao.get_all()
+        try:
+            equipamentos_all = Equipamento.get_all() or []
+            emprestimos_all = Emprestimo.get_all() or []
+            manutencoes_all = Manutencao.get_all() or []
+        except Exception as e:
+            current_app.logger.warning(f'Aviso ao buscar dados: {str(e)}')
+            equipamentos_all = []
+            emprestimos_all = []
+            manutencoes_all = []
         
         # Total de equipamentos
-        total_equipamentos = len(equipamentos_all)
+        total_equipamentos = len(equipamentos_all) if equipamentos_all else 0
         
         # Equipamentos por status
         status_data = {}
-        for eq in equipamentos_all:
-            status = eq.status or 'Desconhecido'
-            status_data[status] = status_data.get(status, 0) + 1
+        if equipamentos_all:
+            for eq in equipamentos_all:
+                status = eq.status or 'Desconhecido'
+                status_data[status] = status_data.get(status, 0) + 1
         status_data = list(status_data.items())
         
         # Equipamentos por tipo
         tipo_data = {}
-        for eq in equipamentos_all:
-            tipo = eq.tipo or 'Desconhecido'
-            tipo_data[tipo] = tipo_data.get(tipo, 0) + 1
+        if equipamentos_all:
+            for eq in equipamentos_all:
+                tipo = eq.tipo or 'Desconhecido'
+                tipo_data[tipo] = tipo_data.get(tipo, 0) + 1
         tipo_data = list(tipo_data.items())
         
         # Equipamentos em estoque (disponíveis)
-        equipamentos_estoque = len([eq for eq in equipamentos_all if eq.status == 'Estoque'])
+        equipamentos_estoque = len([eq for eq in equipamentos_all if eq.status == 'Estoque']) if equipamentos_all else 0
         
         # Equipamentos emprestados
-        equipamentos_emprestados = len([eq for eq in equipamentos_all if eq.status == 'Emprestado'])
+        equipamentos_emprestados = len([eq for eq in equipamentos_all if eq.status == 'Emprestado']) if equipamentos_all else 0
         
         # Equipamentos em manutenção
-        equipamentos_manutencao = len([eq for eq in equipamentos_all if eq.status == 'Manutenção'])
+        equipamentos_manutencao = len([eq for eq in equipamentos_all if eq.status == 'Manutenção']) if equipamentos_all else 0
         
         # Valor total do inventário
-        valor_total = sum([eq.valor or 0 for eq in equipamentos_all])
+        valor_total = sum([eq.valor or 0 for eq in equipamentos_all]) if equipamentos_all else 0
         
         # Empréstimos ativos
-        emprestimos_ativos = len([emp for emp in emprestimos_all if emp.status == 'Ativo'])
+        emprestimos_ativos = len([emp for emp in emprestimos_all if emp.status == 'Ativo']) if emprestimos_all else 0
         
         # Empréstimos por departamento (ativos) - TOP 10
         emps_por_dept = {}
-        for emp in emprestimos_all:
-            if emp.status == 'Ativo':
-                dept = emp.departamento or 'Sem Departamento'
-                emps_por_dept[dept] = emps_por_dept.get(dept, 0) + 1
+        if emprestimos_all:
+            for emp in emprestimos_all:
+                if emp.status == 'Ativo':
+                    dept = emp.departamento or 'Sem Departamento'
+                    emps_por_dept[dept] = emps_por_dept.get(dept, 0) + 1
         emprestimos_por_dept = sorted(emps_por_dept.items(), key=lambda x: x[1], reverse=True)[:10]
         
         # Taxa de utilização (emprestados / total)
@@ -649,37 +668,40 @@ def dashboard_data():
         
         # Equipamentos mais emprestados (histórico completo) - TOP 5
         eq_count = {}
-        for emp in emprestimos_all:
-            eq_id = emp.equipamento_id
-            eq_count[eq_id] = eq_count.get(eq_id, 0) + 1
+        if emprestimos_all:
+            for emp in emprestimos_all:
+                eq_id = emp.equipamento_id
+                eq_count[eq_id] = eq_count.get(eq_id, 0) + 1
         
         eq_popular = []
-        for eq in equipamentos_all:
-            if eq_count.get(eq.id, 0) > 0:
-                eq_popular.append((eq_count[eq.id], eq.nome, eq.tipo))
+        if equipamentos_all:
+            for eq in equipamentos_all:
+                if eq_count.get(eq.id, 0) > 0:
+                    eq_popular.append((eq_count[eq.id], eq.nome, eq.tipo))
         eq_popular.sort(reverse=True, key=lambda x: x[0])
         equipamentos_populares = [(e[1], e[2], e[0]) for e in eq_popular[:5]]
         
         # Empréstimos nos últimos 30 dias
         trinta_dias_atras = datetime.utcnow() - timedelta(days=30)
         emprestimos_recentes = 0
-        for emp in emprestimos_all:
-            try:
-                if emp.data_emprestimo:
-                    if isinstance(emp.data_emprestimo, str):
-                        emp_date = datetime.fromisoformat(emp.data_emprestimo.replace('Z', '+00:00'))
-                    else:
-                        emp_date = emp.data_emprestimo
-                    if emp_date >= trinta_dias_atras:
-                        emprestimos_recentes += 1
-            except:
-                pass
+        if emprestimos_all:
+            for emp in emprestimos_all:
+                try:
+                    if emp.data_emprestimo:
+                        if isinstance(emp.data_emprestimo, str):
+                            emp_date = datetime.fromisoformat(emp.data_emprestimo.replace('Z', '+00:00'))
+                        else:
+                            emp_date = emp.data_emprestimo
+                        if emp_date >= trinta_dias_atras:
+                            emprestimos_recentes += 1
+                except:
+                    pass
         
         # Custo total de manutenções
-        custo_manutencoes = sum([m.custo or 0 for m in manutencoes_all])
+        custo_manutencoes = sum([m.custo or 0 for m in manutencoes_all]) if manutencoes_all else 0
         
         # Manutenções pendentes (em andamento)
-        manutencoes_pendentes = len([m for m in manutencoes_all if m.status == 'Em Andamento'])
+        manutencoes_pendentes = len([m for m in manutencoes_all if m.status == 'Em Andamento']) if manutencoes_all else 0
         
         # Valor médio dos equipamentos
         valor_medio = (valor_total / total_equipamentos) if total_equipamentos > 0 else 0
@@ -703,7 +725,24 @@ def dashboard_data():
         })
     except Exception as e:
         current_app.logger.error(f'Erro no dashboard_data: {str(e)}', exc_info=True)
-        return jsonify({'success': False, 'message': f'Erro ao carregar dashboard: {str(e)}'}), 500
+        return jsonify({
+            'total_equipamentos': 0,
+            'equipamentos_estoque': 0,
+            'equipamentos_emprestados': 0,
+            'equipamentos_manutencao': 0,
+            'emprestimos_ativos': 0,
+            'emprestimos_recentes': 0,
+            'manutencoes_pendentes': 0,
+            'taxa_utilizacao': 0,
+            'valor_total': 0,
+            'valor_medio': 0,
+            'custo_manutencoes': 0,
+            'status': [],
+            'tipos': [],
+            'emprestimos_por_departamento': [],
+            'equipamentos_populares': [],
+            'error': str(e)
+        }), 200
 
 @main.route('/equipamentos')
 @login_required
