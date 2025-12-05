@@ -93,43 +93,20 @@ def login():
             if not email or not senha:
                 return jsonify({'success': False, 'message': 'Email e senha são obrigatórios.'}), 400
             
-            # Retry logic para conexão com banco
-            max_retries = 3
-            retry_delay = 0.5
-            usuario = None
-            
-            for attempt in range(max_retries):
-                try:
-                    usuario = Usuario.query.filter_by(email=email).first()
-                    break
-                except Exception as db_error:
-                    if attempt < max_retries - 1:
-                        current_app.logger.warning(f'Tentativa {attempt + 1} falhou, tentando novamente...')
-                        import time
-                        time.sleep(retry_delay)
-                        retry_delay *= 2  # Exponential backoff
-                    else:
-                        raise db_error
+            # Busca usuário usando Supabase REST API
+            usuario = Usuario.get_by_email(email)
             
             if usuario and usuario.check_password(senha):
                 if not usuario.ativo:
                     return jsonify({'success': False, 'message': 'Usuário inativo. Contate o administrador.'}), 403
                 
                 login_user(usuario, remember=data.get('lembrar', False))
-                usuario.ultimo_acesso = datetime.utcnow()
                 
-                # Retry para commit
-                for attempt in range(max_retries):
-                    try:
-                        db.session.commit()
-                        break
-                    except Exception as commit_error:
-                        db.session.rollback()
-                        if attempt < max_retries - 1:
-                            import time
-                            time.sleep(0.5)
-                        else:
-                            current_app.logger.error(f'Falha ao salvar ultimo_acesso: {str(commit_error)}')
+                # Atualiza último acesso
+                try:
+                    usuario.update(ultimo_acesso=datetime.utcnow())
+                except Exception as e:
+                    current_app.logger.error(f'Falha ao salvar ultimo_acesso: {str(e)}')
                 
                 return jsonify({'success': True, 'message': 'Login realizado com sucesso!'})
             
