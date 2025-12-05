@@ -134,20 +134,17 @@ def registro():
         data = request.get_json()
         
         # Valida se o email já existe
-        if Usuario.query.filter_by(email=data.get('email')).first():
+        if Usuario.get_by_email(data.get('email')):
             return jsonify({'success': False, 'message': 'Email já cadastrado.'}), 400
         
         # Cria novo usuário
-        novo_usuario = Usuario(
+        novo_usuario = Usuario.create(
             nome=data.get('nome'),
             email=data.get('email'),
+            senha=data.get('senha'),
             departamento=data.get('departamento'),
             telefone=data.get('telefone')
         )
-        novo_usuario.set_password(data.get('senha'))
-        
-        db.session.add(novo_usuario)
-        db.session.commit()
         
         return jsonify({'success': True, 'message': 'Usuário cadastrado com sucesso! Faça login para continuar.'})
     
@@ -170,18 +167,22 @@ def perfil():
         
         if acao == 'atualizar_dados':
             # Atualiza dados pessoais
-            current_user.nome = data.get('nome', current_user.nome)
-            current_user.departamento = data.get('departamento', current_user.departamento)
-            current_user.telefone = data.get('telefone', current_user.telefone)
+            update_data = {}
+            if 'nome' in data:
+                update_data['nome'] = data['nome']
+            if 'departamento' in data:
+                update_data['departamento'] = data['departamento']
+            if 'telefone' in data:
+                update_data['telefone'] = data['telefone']
             
             # Verifica se o email mudou e se já não está em uso
             novo_email = data.get('email')
             if novo_email and novo_email != current_user.email:
-                if Usuario.query.filter_by(email=novo_email).first():
+                if Usuario.get_by_email(novo_email):
                     return jsonify({'success': False, 'message': 'Este email já está em uso.'}), 400
-                current_user.email = novo_email
+                update_data['email'] = novo_email
             
-            db.session.commit()
+            current_user.update(**update_data)
             return jsonify({'success': True, 'message': 'Dados atualizados com sucesso!'})
         
         elif acao == 'alterar_senha':
@@ -200,8 +201,7 @@ def perfil():
             if senha_nova != senha_confirmar:
                 return jsonify({'success': False, 'message': 'As senhas não coincidem.'}), 400
             
-            current_user.set_password(senha_nova)
-            db.session.commit()
+            current_user.update(senha=senha_nova)
             
             return jsonify({'success': True, 'message': 'Senha alterada com sucesso!'})
         
@@ -223,7 +223,7 @@ def admin():
 @admin_required
 def listar_usuarios():
     """Lista todos os usuários"""
-    usuarios = Usuario.query.order_by(Usuario.data_cadastro.desc()).all()
+    usuarios = Usuario.get_all()
     return jsonify([usuario.to_dict() for usuario in usuarios])
 
 @main.route('/admin/usuario/<int:id>/toggle-ativo', methods=['PUT'])
@@ -232,16 +232,18 @@ def listar_usuarios():
 def toggle_usuario_ativo(id):
     """Ativa ou desativa um usuário"""
     try:
-        usuario = Usuario.query.get_or_404(id)
+        usuario = Usuario.get_by_id(id)
+        if not usuario:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
         
         # Não permite desativar a si mesmo
         if usuario.id == current_user.id:
             return jsonify({'success': False, 'message': 'Você não pode desativar sua própria conta.'}), 400
         
-        usuario.ativo = not usuario.ativo
-        db.session.commit()
+        novo_status = not usuario.ativo
+        usuario.update(ativo=novo_status)
         
-        status = 'ativado' if usuario.ativo else 'desativado'
+        status = 'ativado' if novo_status else 'desativado'
         return jsonify({
             'success': True,
             'message': f'Usuário {status} com sucesso!',
@@ -249,7 +251,6 @@ def toggle_usuario_ativo(id):
         })
         
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao alterar status: {str(e)}'}), 400
 
 @main.route('/admin/usuario/<int:id>/toggle-admin', methods=['PUT'])
@@ -258,16 +259,18 @@ def toggle_usuario_ativo(id):
 def toggle_usuario_admin(id):
     """Torna um usuário admin ou remove privilégios de admin"""
     try:
-        usuario = Usuario.query.get_or_404(id)
+        usuario = Usuario.get_by_id(id)
+        if not usuario:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
         
         # Não permite remover admin de si mesmo
         if usuario.id == current_user.id:
             return jsonify({'success': False, 'message': 'Você não pode remover seus próprios privilégios de administrador.'}), 400
         
-        usuario.is_admin = not usuario.is_admin
-        db.session.commit()
+        novo_status = not usuario.is_admin
+        usuario.update(is_admin=novo_status)
         
-        status = 'promovido a administrador' if usuario.is_admin else 'removido de administrador'
+        status = 'promovido a administrador' if novo_status else 'removido de administrador'
         return jsonify({
             'success': True,
             'message': f'Usuário {status} com sucesso!',
@@ -275,7 +278,6 @@ def toggle_usuario_admin(id):
         })
         
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao alterar privilégios: {str(e)}'}), 400
 
 @main.route('/admin/usuario/<int:id>/deletar', methods=['DELETE'])
@@ -284,19 +286,19 @@ def toggle_usuario_admin(id):
 def deletar_usuario(id):
     """Deleta um usuário"""
     try:
-        usuario = Usuario.query.get_or_404(id)
+        usuario = Usuario.get_by_id(id)
+        if not usuario:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
         
         # Não permite deletar a si mesmo
         if usuario.id == current_user.id:
             return jsonify({'success': False, 'message': 'Você não pode deletar sua própria conta.'}), 400
         
-        db.session.delete(usuario)
-        db.session.commit()
+        usuario.delete()
         
         return jsonify({'success': True, 'message': 'Usuário deletado com sucesso!'})
         
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao deletar usuário: {str(e)}'}), 400
 
 @main.route('/admin/usuario/adicionar', methods=['POST'])
@@ -308,7 +310,7 @@ def adicionar_usuario():
         data = request.get_json()
         
         # Valida se o email já existe
-        if Usuario.query.filter_by(email=data.get('email')).first():
+        if Usuario.get_by_email(data.get('email')):
             return jsonify({'success': False, 'message': 'Email já cadastrado.'}), 400
         
         # Valida senha
@@ -316,18 +318,15 @@ def adicionar_usuario():
             return jsonify({'success': False, 'message': 'Senha deve ter no mínimo 6 caracteres.'}), 400
         
         # Cria novo usuário
-        novo_usuario = Usuario(
+        novo_usuario = Usuario.create(
             nome=data.get('nome'),
             email=data.get('email'),
+            senha=data.get('senha'),
             departamento=data.get('departamento'),
             telefone=data.get('telefone'),
             is_admin=data.get('is_admin', False),
             ativo=data.get('ativo', True)
         )
-        novo_usuario.set_password(data.get('senha'))
-        
-        db.session.add(novo_usuario)
-        db.session.commit()
         
         return jsonify({
             'success': True,
@@ -336,7 +335,6 @@ def adicionar_usuario():
         }), 201
         
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao criar usuário: {str(e)}'}), 400
 
 @main.route('/admin/usuario/<int:id>/editar', methods=['PUT'])
@@ -345,35 +343,48 @@ def adicionar_usuario():
 def editar_usuario(id):
     """Edita um usuário existente"""
     try:
-        usuario = Usuario.query.get_or_404(id)
+        usuario = Usuario.get_by_id(id)
+        if not usuario:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+            
         data = request.get_json()
+        update_data = {}
         
         # Atualiza dados básicos
-        usuario.nome = data.get('nome', usuario.nome)
-        usuario.departamento = data.get('departamento', usuario.departamento)
-        usuario.telefone = data.get('telefone', usuario.telefone)
+        if 'nome' in data:
+            update_data['nome'] = data['nome']
+        if 'departamento' in data:
+            update_data['departamento'] = data['departamento']
+        if 'telefone' in data:
+            update_data['telefone'] = data['telefone']
         
         # Verifica email único se mudou
         novo_email = data.get('email')
         if novo_email and novo_email != usuario.email:
-            if Usuario.query.filter_by(email=novo_email).first():
+            if Usuario.get_by_email(novo_email):
                 return jsonify({'success': False, 'message': 'Email já está em uso.'}), 400
-            usuario.email = novo_email
+            update_data['email'] = novo_email
         
         # Atualiza senha se fornecida
         if data.get('senha'):
             if len(data.get('senha')) < 6:
                 return jsonify({'success': False, 'message': 'Senha deve ter no mínimo 6 caracteres.'}), 400
-            usuario.set_password(data.get('senha'))
+            update_data['senha'] = data['senha']
         
         # Atualiza status e privilégios (exceto para si mesmo)
         if usuario.id != current_user.id:
             if 'is_admin' in data:
-                usuario.is_admin = data.get('is_admin')
+                update_data['is_admin'] = data['is_admin']
             if 'ativo' in data:
-                usuario.ativo = data.get('ativo')
+                update_data['ativo'] = data['ativo']
         
-        db.session.commit()
+        usuario.update(**update_data)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Usuário atualizado com sucesso!',
+            'usuario': usuario.to_dict()
+        })
         
         return jsonify({
             'success': True,
@@ -589,67 +600,76 @@ def dashboard_data():
     """Retorna dados para o dashboard"""
     from datetime import timedelta
     
+    # Busca todos os dados uma vez
+    equipamentos_all = Equipamento.get_all()
+    emprestimos_all = Emprestimo.get_all()
+    manutencoes_all = Manutencao.get_all()
+    
     # Total de equipamentos
-    total_equipamentos = Equipamento.query.count()
+    total_equipamentos = len(equipamentos_all)
     
     # Equipamentos por status
-    status_data = db.session.query(
-        Equipamento.status, 
-        func.count(Equipamento.id)
-    ).group_by(Equipamento.status).all()
+    status_data = {}
+    for eq in equipamentos_all:
+        status = eq.status or 'Desconhecido'
+        status_data[status] = status_data.get(status, 0) + 1
+    status_data = list(status_data.items())
     
     # Equipamentos por tipo
-    tipo_data = db.session.query(
-        Equipamento.tipo, 
-        func.count(Equipamento.id)
-    ).group_by(Equipamento.tipo).all()
+    tipo_data = {}
+    for eq in equipamentos_all:
+        tipo = eq.tipo or 'Desconhecido'
+        tipo_data[tipo] = tipo_data.get(tipo, 0) + 1
+    tipo_data = list(tipo_data.items())
     
     # Equipamentos em estoque (disponíveis)
-    equipamentos_estoque = Equipamento.query.filter_by(status='Estoque').count()
+    equipamentos_estoque = len([eq for eq in equipamentos_all if eq.status == 'Estoque'])
     
     # Equipamentos emprestados
-    equipamentos_emprestados = Equipamento.query.filter_by(status='Emprestado').count()
+    equipamentos_emprestados = len([eq for eq in equipamentos_all if eq.status == 'Emprestado'])
     
     # Equipamentos em manutenção
-    equipamentos_manutencao = Equipamento.query.filter_by(status='Manutenção').count()
+    equipamentos_manutencao = len([eq for eq in equipamentos_all if eq.status == 'Manutenção'])
     
     # Valor total do inventário
-    valor_total = db.session.query(func.sum(Equipamento.valor)).scalar() or 0
+    valor_total = sum([eq.valor or 0 for eq in equipamentos_all])
     
     # Empréstimos ativos
-    emprestimos_ativos = Emprestimo.query.filter_by(status='Ativo').count()
+    emprestimos_ativos = len([emp for emp in emprestimos_all if emp.status == 'Ativo'])
     
-    # Empréstimos por departamento (ativos)
-    emprestimos_por_dept = db.session.query(
-        Emprestimo.departamento,
-        func.count(Emprestimo.id)
-    ).filter(Emprestimo.status == 'Ativo').group_by(
-        Emprestimo.departamento
-    ).order_by(func.count(Emprestimo.id).desc()).limit(10).all()
+    # Empréstimos por departamento (ativos) - TOP 10
+    emps_por_dept = {}
+    for emp in emprestimos_all:
+        if emp.status == 'Ativo':
+            dept = emp.departamento or 'Sem Departamento'
+            emps_por_dept[dept] = emps_por_dept.get(dept, 0) + 1
+    emprestimos_por_dept = sorted(emps_por_dept.items(), key=lambda x: x[1], reverse=True)[:10]
     
     # Taxa de utilização (emprestados / total)
     taxa_utilizacao = (equipamentos_emprestados / total_equipamentos * 100) if total_equipamentos > 0 else 0
     
-    # Equipamentos mais emprestados (histórico completo)
-    equipamentos_populares = db.session.query(
-        Equipamento.nome,
-        Equipamento.tipo,
-        func.count(Emprestimo.id).label('total_emprestimos')
-    ).join(Emprestimo, Equipamento.id == Emprestimo.equipamento_id).group_by(
-        Equipamento.id
-    ).order_by(func.count(Emprestimo.id).desc()).limit(5).all()
+    # Equipamentos mais emprestados (histórico completo) - TOP 5
+    eq_count = {}
+    for emp in emprestimos_all:
+        eq_id = emp.equipamento_id
+        eq_count[eq_id] = eq_count.get(eq_id, 0) + 1
+    
+    eq_popular = []
+    for eq in equipamentos_all:
+        if eq_count.get(eq.id, 0) > 0:
+            eq_popular.append((eq_count[eq.id], eq.nome, eq.tipo))
+    eq_popular.sort(reverse=True, key=lambda x: x[0])
+    equipamentos_populares = [(e[1], e[2], e[0]) for e in eq_popular[:5]]
     
     # Empréstimos nos últimos 30 dias
     trinta_dias_atras = datetime.utcnow() - timedelta(days=30)
-    emprestimos_recentes = Emprestimo.query.filter(
-        Emprestimo.data_emprestimo >= trinta_dias_atras
-    ).count()
+    emprestimos_recentes = len([emp for emp in emprestimos_all if emp.data_emprestimo and emp.data_emprestimo >= trinta_dias_atras])
     
     # Custo total de manutenções
-    custo_manutencoes = db.session.query(func.sum(Manutencao.custo)).scalar() or 0
+    custo_manutencoes = sum([m.custo or 0 for m in manutencoes_all])
     
     # Manutenções pendentes (em andamento)
-    manutencoes_pendentes = Manutencao.query.filter_by(status='Em Andamento').count()
+    manutencoes_pendentes = len([m for m in manutencoes_all if m.status == 'Em Andamento'])
     
     # Valor médio dos equipamentos
     valor_medio = (valor_total / total_equipamentos) if total_equipamentos > 0 else 0
@@ -668,7 +688,7 @@ def dashboard_data():
         'custo_manutencoes': float(custo_manutencoes),
         'status': [{'name': s[0], 'value': s[1]} for s in status_data],
         'tipos': [{'name': t[0], 'value': t[1]} for t in tipo_data],
-        'emprestimos_por_departamento': [{'name': d[0] or 'Sem Departamento', 'value': d[1]} for d in emprestimos_por_dept],
+        'emprestimos_por_departamento': [{'name': d[0], 'value': d[1]} for d in emprestimos_por_dept],
         'equipamentos_populares': [{'nome': e[0], 'tipo': e[1], 'emprestimos': e[2]} for e in equipamentos_populares]
     })
 
